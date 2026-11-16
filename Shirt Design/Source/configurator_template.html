@@ -1,0 +1,268 @@
+<title>Sensor Placement Configurator</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Archivo:wght@600;700&display=swap">
+<style>
+/* Layout: engineering workbench — 3D stage + evidence rail on top, live dimensioned flats below */
+:root{
+  --bg:#f3f2ee; --panel:#ffffff; --ink:#18202b; --muted:#5d6672; --line:#d9d6ce; --stage:#e7e5df;
+  --accent:#b4471a; --good:#15803d; --mid:#b45309; --bad:#b91c1c; --trace:#c2410c; --sel:#1d4ed8;
+  --f-display:"Archivo",system-ui,sans-serif; --f-body:"IBM Plex Sans",system-ui,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121519;--panel:#1a1e24;--ink:#e6e8eb;--muted:#9aa3ad;--line:#2b313a;--stage:#1d2229;--accent:#f0864f;--good:#4ade80;--mid:#fbbf24;--bad:#f87171;--trace:#fb923c;--sel:#93c5fd;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#121519;--panel:#1a1e24;--ink:#e6e8eb;--muted:#9aa3ad;--line:#2b313a;--stage:#1d2229;--accent:#f0864f;--good:#4ade80;--mid:#fbbf24;--bad:#f87171;--trace:#fb923c;--sel:#93c5fd;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 var(--f-body);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px 28px}
+h1{font:700 22px/1.15 var(--f-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+.sub{color:var(--muted);margin:4px 0 0;max-width:80ch}
+h2{font:600 11px/1 var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.top{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between;margin-bottom:12px}
+.presets{display:flex;flex-wrap:wrap;gap:6px}
+button,select{font:inherit;font-size:12.5px;padding:6px 10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;cursor:pointer}
+button:hover{border-color:var(--accent)} button.on{border-color:var(--accent);color:var(--accent)}
+button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--sel);outline-offset:2px}
+.work{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:12px}
+#stage{position:relative;background:var(--stage);border:1px solid var(--line);border-radius:8px;height:min(70vh,640px);min-height:380px;overflow:hidden}
+#stage canvas{display:block;width:100%;height:100%;touch-action:none}
+.overlay{position:absolute;left:10px;top:10px;display:flex;flex-direction:column;gap:6px;max-width:calc(100% - 20px)}
+.chiprow{display:flex;flex-wrap:wrap;gap:6px}
+.legend{position:absolute;left:10px;bottom:10px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:11.5px;color:var(--muted)}
+.ramp{height:8px;width:160px;border-radius:2px;background:linear-gradient(90deg,#b91c1c,#f59e0b 50%,#16a34a);margin:4px 0 2px}
+.views{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+.phys{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center;font-size:12.5px}.phys select{width:100%}
+aside{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:14px;min-width:0;max-height:min(70vh,640px);overflow:auto}
+.mods{display:flex;flex-direction:column;gap:4px}
+.mod{display:grid;grid-template-columns:12px 1fr auto;gap:8px;align-items:center;padding:6px 8px;border:1px solid transparent;border-radius:6px;cursor:pointer;text-align:left;background:transparent}
+.mod.sel{border-color:var(--sel)} .mod:hover{border-color:var(--line)}
+.dot{width:12px;height:12px;border-radius:3px}
+.pill{font:500 11px/1 var(--f-mono);padding:4px 6px;border-radius:99px;color:#fff;white-space:nowrap}
+.card{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:8px}
+.card h3{font:700 15px/1.2 var(--f-display);margin:0}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:12.5px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden}.bar i{display:block;height:100%}
+.why{font-size:12.5px;margin:0}.cite{font-size:12px;color:var(--muted);margin:0}
+.warn{font-size:12.5px;margin:0;padding-left:16px}.warn li{margin:2px 0}
+.ok{color:var(--good)}.w{color:var(--mid)}.b{color:var(--bad)}
+label.tg{display:flex;gap:6px;align-items:center;font-size:12.5px;cursor:pointer}
+.lower{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:12px;margin-top:12px}
+.sheet{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px;min-width:0}
+.svgwrap{overflow-x:auto}
+svg text{font-family:var(--f-mono)}
+table{border-collapse:collapse;width:100%;font-size:12px;font-variant-numeric:tabular-nums}
+th,td{border-bottom:1px solid var(--line);padding:5px 6px;text-align:left}th{color:var(--muted);font-weight:500}
+.tablewrap{overflow-x:auto}
+textarea{width:100%;min-height:150px;font:12px/1.4 var(--f-mono);background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px}
+.refs{font-size:12px;color:var(--muted);padding-left:18px}.refs li{margin:3px 0}
+.hint{font-size:12px;color:var(--muted);margin:0}
+@media (max-width:900px){.work,.lower{grid-template-columns:1fr} aside{max-height:none}
+ #stage{height:auto;display:flex;flex-direction:column} #stage canvas{order:2;height:440px!important} .overlay{position:static;order:0;padding:10px 10px 0;max-width:none}
+ .views{position:static;order:1;align-items:flex-start;padding:8px 10px} .views .chiprow{justify-content:flex-start!important} .views .hint{text-align:left!important;margin-left:0!important}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="top">
+  <div>
+    <h1>Sensor Placement Configurator</h1>
+    <p class="sub">RSAF heat-strain shirt, size M. The shirt is a cloth simulation on a moving mannequin: pick a fit and a motion, and each sensor's live skin gap is reported. Drag any sensor on the 3D shirt. The shirt colours show how strongly the consolidated literature review supports each spot for the selected sensor, and the flats below redraw with dimensions from the back neck point (BNP), centre back (CB) and centre front (CF).</p>
+  </div>
+  <div class="presets" role="group" aria-label="Presets">
+    <button data-p="revA" class="on">Review recommendation (Rev A)</button>
+    <button data-p="lim">Mr Lim: shoulder-top IMU</button>
+    <button data-p="chest">Chest IMU (Buller 2022 style)</button>
+    <button data-p="lumbar">Lower-back IMU reference</button>
+  </div>
+</div>
+
+<div class="work">
+  <div id="stage">
+    <div class="overlay">
+      <div class="chiprow">
+        <label class="tg"><input type="checkbox" id="heat" checked> Evidence heatmap for</label>
+        <select id="heatFor" aria-label="Heatmap sensor"></select>
+      </div>
+      <div class="chiprow">
+        <label class="tg"><input type="checkbox" id="gearRuck" checked> Rucksack zones</label>
+        <label class="tg"><input type="checkbox" id="gearVest"> Vest zones</label>
+        <label class="tg"><input type="checkbox" id="bundle" checked> Keep temp + IMU + sweat together as M1 patch</label>
+        <label class="tg"><input type="checkbox" id="mirror" checked> Mirror ECG pair</label>
+      </div>
+    </div>
+    <div class="views"><div class="chiprow" style="justify-content:flex-end"><button data-v="back">Back</button><button data-v="front">Front</button><button data-v="left">Left</button><button data-v="right">Right</button></div><div class="chiprow" role="group" aria-label="Mouse mode" style="justify-content:flex-end"><button data-mouse="sensors" class="on">Move sensors</button><button data-mouse="fabric">Pull fabric</button></div><p class="hint" id="mouseHint" style="text-align:right;max-width:240px;margin-left:auto">Drag a sensor to move it; drag empty space to rotate.</p></div>
+    <div class="legend"><div>Evidence for <b id="legendFor"></b></div><div class="ramp"></div><div style="display:flex;justify-content:space-between;width:160px"><span>avoid</span><span>weak</span><span>strong</span></div><div id="gearKey">Hatched blue-grey = gear contact zone</div></div>
+  </div>
+  <aside>
+    <div><h2>Fabric physics</h2>
+      <div class="phys">
+        <label class="tg" style="grid-column:1/-1"><input type="checkbox" id="physOn" checked> Simulate cloth (gravity, stretch, friction on skin)</label>
+        <label for="fit">Fit</label><select id="fit"><option value="compression">Compression (3.5% under body girth)</option><option value="regular">Regular (5% ease)</option><option value="loose">Loose (14% ease)</option></select>
+        <label for="motion">Motion</label><select id="motion"><option value="still">Standing still</option><option value="walk">Marching (0.9 Hz stride)</option><option value="run">Running (1.35 Hz stride)</option></select>
+        <label class="tg" style="grid-column:1/-1"><input type="checkbox" id="wind"> Head wind (gusting)</label>
+        <label class="tg" style="grid-column:1/-1"><input type="checkbox" id="dummy" checked> Show mannequin</label>
+        <div style="grid-column:1/-1"><button id="resetCloth" type="button">Reset cloth</button></div>
+      </div>
+      <p class="hint" style="margin-top:6px">Each sensor adds its mass to the fabric under it. Skin gap is measured every frame between the fabric under each footprint and the body.</p></div>
+    <div><h2>Sensors · drag on the shirt or pick here</h2><div class="mods" id="mods"></div></div>
+    <div class="card" id="detail"></div>
+    <div class="card"><h2>Configuration checks</h2><ul class="warn" id="checks"></ul></div>
+  </aside>
+</div>
+
+<div class="lower">
+  <div class="sheet">
+    <h2>Live 2D placement drawing · garment flats, scale shown in mm · selected item dimensioned</h2>
+    <div class="svgwrap"><svg id="flats" viewBox="0 0 1000 560" width="100%" role="img" aria-label="Front and back flats with sensor placements"></svg></div>
+    <div class="tablewrap"><table id="coords"></table></div>
+  </div>
+  <div class="sheet" style="display:flex;flex-direction:column;gap:10px">
+    <h2>Placement file (placement.json)</h2>
+    <p class="hint">Copy this into <code>Shirt Design\Source\placement.json</code>, then run <code>python build_all.py</code> to regenerate the 3D model, drawing set and DXF at these positions. Paste a saved file and press Apply to load it here.</p>
+    <textarea id="json" spellcheck="false" aria-label="Placement JSON"></textarea>
+    <div style="display:flex;gap:6px;flex-wrap:wrap"><button id="copy">Copy JSON</button><button id="apply">Apply pasted JSON</button><span id="msg" class="hint" role="status"></span></div>
+    <h2 style="margin-top:6px">Sources behind the scores</h2>
+    <ol class="refs" id="refs"></ol>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+const RULES = __RULES__;
+const REFS = __REFS__;
+// ---------- garment geometry (size M, mm) — same model as the CAD scripts ----------
+const TZ=[0,120,260,400,470,530,590,640,675,700], TA=[172,165,170,182,186,188,196,150,95,72], TB=[118,112,118,128,130,126,112,95,72,62];
+const NEXP=2.6, BNP=700, SL={rootZ:560, rootX:185, len:210, r0:78, r1:66, droop:28*Math.PI/180};
+function interp(z,a){ if(z<=TZ[0])return a[0]; for(let i=1;i<TZ.length;i++){ if(z<=TZ[i]){const t=(z-TZ[i-1])/(TZ[i]-TZ[i-1]); return a[i-1]+t*(a[i]-a[i-1]);} } return a[a.length-1]; }
+function tp(z,th){ const a=interp(z,TA), b=interp(z,TB), c=Math.cos(th), s=Math.sin(th), e=2/NEXP; return [a*Math.sign(c)*Math.pow(Math.abs(c),e), b*Math.sign(s)*Math.pow(Math.abs(s),e), z]; }
+const ARC=new Map(), NS=720;
+function arc(z){ const k=Math.round(Math.max(0,Math.min(705,z))); if(ARC.has(k))return ARC.get(k);
+  const th=new Float64Array(NS+1), d=new Float64Array(NS+1); let prev=tp(k,-Math.PI/2);
+  for(let i=0;i<=NS;i++){ th[i]=-Math.PI/2+2*Math.PI*i/NS; const p=tp(k,th[i]); d[i]= i? d[i-1]+Math.hypot(p[0]-prev[0],p[1]-prev[1]) : 0; prev=p; }
+  const r={th,d,C:d[NS]}; ARC.set(k,r); return r; }
+function lerpTab(x,xs,ys){ let lo=0,hi=xs.length-1; while(hi-lo>1){const m=(lo+hi)>>1; if(xs[m]<=x)lo=m; else hi=m;} const t=(x-xs[lo])/((xs[hi]-xs[lo])||1); return ys[lo]+t*(ys[hi]-ys[lo]); }
+function sToTh(s,z){ const A=arc(z); let ss=((s%A.C)+A.C)%A.C; return lerpTab(ss,A.d,A.th); }
+function thToS(th,z){ const A=arc(z); let t=th; while(t< -Math.PI/2)t+=2*Math.PI; while(t>=1.5*Math.PI)t-=2*Math.PI; let s=lerpTab(t,A.th,A.d); if(s>A.C/2)s-=A.C; return s; }
+
+// ---------- evidence model ----------
+function inR(v,r){ return !r || (v>=r[0] && v<=r[1]); }
+function where(s,z){ const C=arc(z).C, dcb=Math.abs(s), dcf=C/2-Math.abs(s), back=dcb<C/4; return {C,dcb,dcf,back,side: s>=0?'R':'L'}; }
+function region(s,z){ const w=where(s,z); for(const r of RULES.regions){ if(r.side==='back'&&!w.back)continue; if(r.side==='front'&&w.back)continue;
+  if(!inR(z,r.z))continue; if(r.dcb&&!inR(w.dcb,r.dcb))continue; if(r.dcf&&!inR(w.dcf,r.dcf))continue; return r; } return RULES.regions[RULES.regions.length-1]; }
+function gearAt(s,z){ const w=where(s,z), out=[]; for(const [gk,g] of Object.entries(RULES.gear)){ if(!gearOn[gk])continue; for(const zn of g.zones){
+  if(zn.side==='back'&&!w.back)continue; if(zn.side==='front'&&w.back)continue; if(!inR(z,zn.z))continue; if(zn.dcb&&!inR(w.dcb,zn.dcb))continue; if(zn.dcf&&!inR(w.dcf,zn.dcf))continue; out.push(zn);} } return out; }
+function sensorRules(k){ return RULES.sensors[k==='ecgL'?'ecgR':k]; }
+function scoreAt(k,place){ const S=sensorRules(k);
+  if(place.kind==='sleeve'){ if(k==='hr'){ const a=((place.ang*180/Math.PI)%360+360)%360; const rid=(a<=110||a>=250)?'upper_arm_outer':'upper_arm_inner'; const r=RULES.sleeve_regions.find(x=>x.id===rid); return {score:S.scores[rid][0],why:S.scores[rid][1],cite:S.scores[rid][2],region:r.name}; }
+    const v=S.scores.sleeve||[0,'This item belongs on the torso.','—']; return {score:v[0],why:v[1],cite:v[2],region:'Sleeve'}; }
+  const r=region(place.s,place.z); if(k==='hr'){ const v=S.scores.torso; return {score:v[0],why:v[1],cite:v[2],region:r.name}; }
+  const v=S.scores[r.id]||[0.3,'No specific evidence for this site in the review.','team assessment']; return {score:v[0],why:v[1],cite:v[2],region:r.name}; }
+const ramp=(x)=>{ const c1=[185,28,28],c2=[245,158,11],c3=[22,163,74]; const t=Math.max(0,Math.min(1,x)); const [a,b,u]= t<.5?[c1,c2,t/.5]:[c2,c3,(t-.5)/.5]; return a.map((v,i)=>Math.round(v+(b[i]-v)*u)); };
+const label=(x)=> x>=.85?'Strong':x>=.65?'Moderate':x>=.45?'Weak':'Avoid';
+const pillCol=(x)=>`rgb(${ramp(x).join(',')})`;
+
+/*__CLOTH_CORE__*/
+/*__CLOTH_SCENE__*/
+
+// ---------- UI ----------
+const heat=document.getElementById('heat'), heatSel=document.getElementById('heatFor');
+for(const k of ['temp','imu','sweat','ecgR','hub','hr']){ const o=document.createElement('option'); o.value=k; o.textContent=RULES.sensors[k].name; heatSel.appendChild(o); }
+let selected='m1';
+function evalModule(k){ if(k==='m1'){ const p=state.place.m1; const parts=['temp','imu','sweat'].map(x=>({k:x,...scoreAt(x,p)})); const sc=parts.reduce((a,b)=>a+b.score,0)/3; return {score:sc,parts,region:parts[0].region}; }
+  return scoreAt(k,effective(k)); }
+function gearFor(k){ const p=effective(k); if(!p||p.kind!=='torso')return []; return gearAt(p.s,p.z); }
+function posText(p){ if(p.kind==='sleeve') return {a:`${p.side>0?'right':'left'} sleeve`, b:`${Math.round(p.t*100)}% along, ${Math.round(((p.ang*180/Math.PI)+360)%360)}° from top`};
+  const w=where(p.s,p.z); return {a:`${Math.round(BNP-p.z)} mm below BNP`, b: w.back? `${Math.round(w.dcb)} mm ${p.s>=0?'right':'left'} of CB (back)` : `${Math.round(w.dcf)} mm ${p.s>=0?'right':'left'} of CF (front)`}; }
+function listMods(){ const box=document.getElementById('mods'); box.innerHTML='';
+  const ks= state.bundle? ['m1','hub','ecgR','ecgL','hr'] : ['temp','imu','sweat','hub','ecgR','ecgL','hr'];
+  for(const k of ks){ const e=evalModule(k); const b=document.createElement('button'); b.className='mod'+(k===selected?' sel':''); b.type='button';
+    b.innerHTML=`<span class="dot" style="background:${DIMS[k][3]}"></span><span>${NAMES[k]}</span><span class="pill" style="background:${pillCol(e.score)}">${label(e.score)} ${e.score.toFixed(2)}</span>`;
+    b.onclick=()=>{ select(k); }; box.appendChild(b); } }
+function select(k){ selected=k; const hk= k==='m1'?'temp': (k==='ecgL'?'ecgR':k); if([...heatSel.options].some(o=>o.value===hk)) heatSel.value=hk; colorShirt(); refresh(); }
+function detail(){ const k=selected, e=evalModule(k), p=effective(k), pt=posText(p), g=gearFor(k), d=document.getElementById('detail');
+  let h=`<h3>${NAMES[k]}</h3><div class="bar"><i style="width:${Math.round(e.score*100)}%;background:${pillCol(e.score)}"></i></div>
+  <dl class="kv"><dt>Region</dt><dd>${e.region}</dd><dt>Position</dt><dd>${pt.a}</dd><dt></dt><dd>${pt.b}</dd><dt>Size</dt><dd>${DIMS[k][0]} × ${DIMS[k][1]} × ${DIMS[k][2]} mm</dd>`;
+  if(p.kind==='torso' && k!=='hub' && k!=='hr'){ const L=traceLen(p,state.place.hub,laneFor(k,state.place.hub)); const lim= k.startsWith('ecg')?RULES.rules.ecg_max_trace_mm:RULES.rules.i2c_max_trace_mm; h+=`<dt>Trace to hub</dt><dd class="${L>lim?'b':'ok'}">≈ ${Math.round(L)} mm (limit ${lim})</dd>`; }
+  const ct=contactFor(k); if(ct&&CONTACT_NEEDED[k==='m1'?'m1':k]){ const bad= k==='imu'? ct.gap>3 : (ct.gap>2||ct.lift>.3); h+=`<dt>Skin contact</dt><dd class="${bad?'w':'ok'}">gap ${ct.gap.toFixed(1)} mm (peak ${ct.peak.toFixed(1)}) · lifted ${Math.round(ct.lift*100)}% of time</dd>`; }
+  h+='</dl>';
+  if(e.parts){ for(const q of e.parts){ h+=`<p class="why"><b>${RULES.sensors[q.k].name}: ${label(q.score)} (${q.score.toFixed(2)}).</b> ${q.why}</p><p class="cite">${q.cite}</p>`; } }
+  else { h+=`<p class="why"><b>${label(e.score)} (${e.score.toFixed(2)}).</b> ${e.why}</p><p class="cite">${e.cite}</p>`; }
+  if(g.length) h+=`<ul class="warn">${g.map(z=>`<li class="w">Under ${z.name}: ${z.effect}.</li>`).join('')}</ul>`;
+  d.innerHTML=h; }
+function checks(){ const out=[]; const R=state.place.ecgR, L=state.place.ecgL;
+  if(R.kind==='torso'&&R.s<0) out.push(['b','Right ECG electrode is on the subject\'s left side; the lead will be reversed.']);
+  if(L.kind==='torso'&&L.s>0) out.push(['b','Left ECG electrode is on the subject\'s right side.']);
+  const sep=Math.abs(R.s-L.s); const sepS=Math.min(sep,arc((R.z+L.z)/2).C-sep); if(sepS<RULES.rules.ecg_min_separation_mm) out.push(['w',`ECG electrodes only ${Math.round(sepS)} mm apart (aim ≥ ${RULES.rules.ecg_min_separation_mm}).`]);
+  const ks= state.bundle? ['m1','hub','ecgR','ecgL','hr'] : ['temp','imu','sweat','hub','ecgR','ecgL','hr'];
+  for(const k of ks){ const e=evalModule(k); if(e.score<0.45) out.push(['b',`${NAMES[k]}: weak or no evidence at this site (${e.score.toFixed(2)}).`]);
+    const g=gearFor(k); const thick=DIMS[k][2]>7; for(const z of g){ if(z.id.startsWith('straps')||z.id==='hip_belt') out.push(['w',`${NAMES[k]} sits under the ${z.name}.`]); else if(thick) out.push(['w',`${NAMES[k]} (${DIMS[k][2]} mm thick) sits under the ${z.name}.`]); } }
+  // overlaps
+  const tor=ks.filter(k=>effective(k).kind==='torso'); for(let i=0;i<tor.length;i++)for(let j=i+1;j<tor.length;j++){ const a=effective(tor[i]),b=effective(tor[j]); if(tor[i].startsWith('ecg')!==tor[j].startsWith('ecg'))continue;
+    const dx=Math.abs(a.s-b.s), dz=Math.abs(a.z-b.z); if(dx<(DIMS[tor[i]][0]+DIMS[tor[j]][0])/2 && dz<(DIMS[tor[i]][1]+DIMS[tor[j]][1])/2) out.push(['b',`${NAMES[tor[i]]} overlaps ${NAMES[tor[j]]}.`]); }
+  const fitName={compression:'compression',regular:'regular',loose:'loose'}[SIM.fit];
+  for(const k of ks){ const ct=contactFor(k), need=CONTACT_NEEDED[k]; if(!ct||!need)continue;
+    if(need==='coupling'){ if(ct.gap>3) out.push(['w',`${NAMES[k]}: ${ct.gap.toFixed(1)} mm off the skin in a ${fitName} fit, so it is loosely coupled and will record fabric sway as well as trunk motion (team assessment).`]); }
+    else if(ct.gap>2||ct.lift>.3) out.push(['w',`${NAMES[k]}: ${ct.gap.toFixed(1)} mm mean skin gap, lifted ${Math.round(ct.lift*100)}% of the time in a ${fitName} fit; expect motion artefact (Pedrini Schuch et al., 2026).`]); }
+  if(!state.bundle) out.push(['w','Split sensors need their own docks and traces: more snaps, more wash-exposed contacts.']);
+  if(!out.length) out.push(['ok','No conflicts found for this configuration.']);
+  document.getElementById('checks').innerHTML=out.map(([c,t])=>`<li class="${c}">${t}</li>`).join(''); }
+
+// ---------- 2D flats (SVG) ----------
+const SV=document.getElementById('flats'), SC=0.62;
+function flatOutline(front){ const hw=z=>arc(z).C/4; const d=SL.droop, dir=[Math.cos(d),-Math.sin(d)]; const A=[hw(530),530], Sh=[218,652];
+  const cA=[A[0]+dir[0]*120,A[1]+dir[1]*120], cS=[Sh[0]+dir[0]*205,Sh[1]+dir[1]*205]; const nc=front?615:690;
+  const right=[[hw(0),0],[hw(120),120],[hw(260),260],[hw(400),400],A,cA,cS,Sh,[82,700]]; for(let i=1;i<=11;i++){ const t=i/11; right.push([82*Math.cos(t*Math.PI/2),700-(700-nc)*Math.sin(t*Math.PI/2)]); }
+  const left=right.slice(0,-1).reverse().map(p=>[-p[0],p[1]]); return right.concat(left); }
+function flatXY(p){ const w=where(p.s,p.z); if(w.back) return {front:false,x:p.s,y:p.z}; return {front:true,x:-Math.sign(p.s)*w.dcf,y:p.z}; }
+function svgEl(tag,attrs,txt){ const e=document.createElementNS('http://www.w3.org/2000/svg',tag); for(const [k,v] of Object.entries(attrs))e.setAttribute(k,v); if(txt!=null)e.textContent=txt; SV.appendChild(e); return e; }
+function drawFlats(){ SV.innerHTML=''; const css=getComputedStyle(document.documentElement); const ink=css.getPropertyValue('--ink').trim(), mut=css.getPropertyValue('--muted').trim(), ln=css.getPropertyValue('--line').trim(), acc=css.getPropertyValue('--trace').trim(), sel=css.getPropertyValue('--sel').trim();
+  svgEl('defs',{}).innerHTML=`<marker id="ar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="${sel}"/></marker>`;
+  const views=[{front:true,ox:250,title:'FRONT (outside view)'},{front:false,ox:750,title:'BACK (outside view)'}]; const oy=520;
+  const T=(ox,x,y)=>[ox+x*SC, oy-y*SC];
+  for(const v of views){ const pts=flatOutline(v.front).map(p=>T(v.ox,p[0],p[1]).join(',')).join(' ');
+    svgEl('polygon',{points:pts,fill:'none',stroke:ink,'stroke-width':1.2});
+    const [cx0,cy0]=T(v.ox,0,-10),[cx1,cy1]=T(v.ox,0,730); svgEl('line',{x1:cx0,y1:cy0,x2:cx1,y2:cy1,stroke:mut,'stroke-dasharray':'8 3 2 3','stroke-width':.6});
+    svgEl('text',{x:v.ox,y:22,'text-anchor':'middle','font-size':13,'font-weight':600,fill:ink},v.title);
+    svgEl('text',{x:v.ox+4,y:T(0,0,-6)[1]+14,'font-size':10,fill:mut},v.front?'CF':'CB');
+    const [bx,by]=T(v.ox,0,BNP); svgEl('line',{x1:v.ox-180,y1:by,x2:v.ox+180,y2:by,stroke:ln,'stroke-width':.6,'stroke-dasharray':'3 3'});
+    if(!v.front){ svgEl('circle',{cx:bx,cy:by,r:3,fill:acc}); svgEl('text',{x:bx+6,y:by-6,'font-size':10,fill:acc},'BNP'); } }
+  // traces
+  const hub=state.place.hub, hf=flatXY(hub); const wired= state.bundle? ['m1','ecgR','ecgL'] : ['temp','imu','sweat','ecgR','ecgL'];
+  for(const k of wired){ const p=state.place[k]; if(p.kind!=='torso')continue; const path=tracePathSZ(p,hub,laneFor(k,hub)).map(([s,z])=>{ const C=arc(z).C; let ss=((s+C/2)%C+C)%C-C/2; const f=flatXY({s:ss,z}); return [f.front?250:750,f.x,f.y,f.front]; });
+    let seg=[]; const flush=()=>{ if(seg.length>1) svgEl('polyline',{points:seg.map(q=>T(q[0],q[1],q[2]).join(',')).join(' '),fill:'none',stroke:acc,'stroke-width':1}); seg=[]; };
+    for(const q of path){ if(seg.length&&seg[seg.length-1][3]!==q[3])flush(); seg.push(q);} flush(); }
+  // modules
+  const ks= state.bundle? ['m1','hub','ecgR','ecgL'] : ['temp','imu','sweat','hub','ecgR','ecgL'];
+  for(const k of ks){ const p=state.place[k], f=flatXY(p), ox=f.front?250:750, [w,h]=DIMS[k]; const [x,y]=T(ox,f.x-w/2,p.z+h/2);
+    const inside=k.startsWith('ecg'); svgEl('rect',{x,y,width:w*SC,height:h*SC,rx:6*SC,fill:inside?'none':DIMS[k][3],'fill-opacity':inside?0:.85,stroke:k===selected?sel:ink,'stroke-width':k===selected?2:.8,'stroke-dasharray':inside?'4 2':'none'});
+    const [lx,ly]=T(ox,f.x,p.z); svgEl('text',{x:lx,y:ly+3,'text-anchor':'middle','font-size':9,fill:inside?ink:'#fff'},({m1:'M1',temp:'T',imu:'IMU',sweat:'SW',hub:'HUB',ecgR:'ECG-R',ecgL:'ECG-L'})[k]); }
+  // dimensions for selected (torso only)
+  const p=effective(selected); if(p && p.kind==='torso'){ const f=flatXY(p), ox=f.front?250:750, [cx,cy]=T(ox,f.x,p.z), [bx,by]=T(ox,f.x,BNP), [c0x]=T(ox,0,0);
+    const xl=cx+(f.x>=0?1:-1)*((DIMS[selected][0]/2)*SC+16);
+    svgEl('line',{x1:xl,y1:by,x2:xl,y2:cy,stroke:sel,'stroke-width':1,'marker-start':'url(#ar)','marker-end':'url(#ar)'}); svgEl('line',{x1:cx,y1:cy,x2:xl,y2:cy,stroke:sel,'stroke-width':.5});
+    svgEl('text',{x:xl+(f.x>=0?4:-4),y:(by+cy)/2,'font-size':11,fill:sel,'text-anchor':f.x>=0?'start':'end'},`${Math.round(BNP-p.z)}`);
+    const yl=cy+(DIMS[selected][1]/2)*SC+14; svgEl('line',{x1:c0x,y1:yl,x2:cx,y2:yl,stroke:sel,'stroke-width':1,'marker-start':'url(#ar)','marker-end':'url(#ar)'});
+    svgEl('text',{x:(c0x+cx)/2,y:yl-4,'font-size':11,fill:sel,'text-anchor':'middle'},`${Math.round(Math.abs(f.x))}`); }
+  svgEl('text',{x:20,y:548,'font-size':10,fill:mut},'Dims in mm along the garment surface, size M. Vertical: below BNP level. Horizontal: from CB (back) or CF (front). Orange = conductive-thread traces. Dashed = inside face.');
+  // coordinate table
+  const rows= (state.bundle? ['m1','hub','ecgR','ecgL','hr'] : ['temp','imu','sweat','hub','ecgR','ecgL','hr']).map(k=>{ const e=evalModule(k), pt=posText(effective(k)); return `<tr><td>${NAMES[k]}</td><td>${pt.a}</td><td>${pt.b}</td><td>${e.region}</td><td><span class="pill" style="background:${pillCol(e.score)}">${label(e.score)}</span></td></tr>`; });
+  document.getElementById('coords').innerHTML=`<tr><th>Item</th><th>Vertical</th><th>Lateral</th><th>Region</th><th>Evidence</th></tr>`+rows.join(''); }
+
+// ---------- JSON ----------
+function toJSON(){ const P={}; for(const k of KEYS){ const p=state.place[k]; P[k]= p.kind==='sleeve'? {kind:'sleeve',side:p.side>0?'R':'L',t:+p.t.toFixed(3),ang_deg:+(p.ang*180/Math.PI).toFixed(1)} : {kind:'torso',s:+p.s.toFixed(1),z:+p.z.toFixed(1)}; }
+  const S={}; for(const k of ['temp','imu','sweat','hub','ecgR','ecgL','hr']){ const e=scoreAt(k,effective(k)); S[k]={region:e.region,score:e.score,cite:e.cite}; }
+  return JSON.stringify({version:1,size:'M',units:'mm; s = surface distance from centre back (+ = subject right), z = height above hem (BNP = 700)',bundleM1:state.bundle,modules:P,evidence:S},null,1); }
+function fromJSON(txt){ const j=JSON.parse(txt); state.bundle=!!j.bundleM1; for(const k of KEYS){ const p=j.modules[k]; if(!p)continue; state.place[k]= p.kind==='sleeve'? {kind:'sleeve',side:p.side==='R'?1:-1,t:p.t,ang:p.ang_deg*Math.PI/180} : {kind:'torso',s:p.s,z:p.z}; } document.getElementById('bundle').checked=state.bundle; }
+
+// ---------- presets ----------
+function preset(name){ const Cx=arc(385).C, Cf=arc(470).C; const P={
+  m1:{kind:'torso',s:0,z:600}, temp:{kind:'torso',s:0,z:615}, imu:{kind:'torso',s:0,z:560}, sweat:{kind:'torso',s:0,z:560},
+  hub:{kind:'torso',s:0,z:680}, ecgR:{kind:'torso',s:Cx/2-95,z:385}, ecgL:{kind:'torso',s:-(Cx/2-95),z:385}, hr:{kind:'sleeve',side:-1,t:.5,ang:0} };
+  let bundle=true;
+  if(name==='lim'){ bundle=false; P.imu={kind:'torso',s:-(arc(665).C/4)+10,z:665}; P.temp={kind:'torso',s:0,z:600}; P.sweat={kind:'torso',s:0,z:545}; }
+  if(name==='chest'){ bundle=false; P.imu={kind:'torso',s:Cf/2-1,z:470}; P.temp={kind:'torso',s:0,z:610}; P.sweat={kind:'torso',s:0,z:550}; }
+  if(name==='lumbar'){ bundle=false; P.imu={kind:'torso',s:0,z:200}; P.temp={kind:'torso',s:0,z:610}; P.sweat={kind:'torso',s:0,z:550}; }
+  state.place=P; state.bundle=bundle; document.getElementById('bundle').checked=bundle; document.querySelectorAll('[data-p]').forEach(b=>b.classList.toggle('on',b.dataset.p===name));
+  selected= name==='revA'?'m1':'imu'; select(selected); }
+
+/*__CLOTH_INTERACT__*/
+</script>

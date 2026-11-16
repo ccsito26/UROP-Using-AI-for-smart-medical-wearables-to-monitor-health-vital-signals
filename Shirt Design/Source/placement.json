@@ -1,0 +1,48 @@
+{
+ "version": 1,
+ "size": "M",
+ "bundleM1": true,
+ "modules": {
+  "m1": {
+   "kind": "torso",
+   "s": 0,
+   "z": 600
+  },
+  "temp": {
+   "kind": "torso",
+   "s": 0,
+   "z": 615
+  },
+  "imu": {
+   "kind": "torso",
+   "s": 0,
+   "z": 560
+  },
+  "sweat": {
+   "kind": "torso",
+   "s": 0,
+   "z": 560
+  },
+  "hub": {
+   "kind": "torso",
+   "s": 0,
+   "z": 680
+  },
+  "ecgR": {
+   "kind": "torso",
+   "s": 414.7,
+   "z": 385
+  },
+  "ecgL": {
+   "kind": "torso",
+   "s": -414.7,
+   "z": 385
+  },
+  "hr": {
+   "kind": "sleeve",
+   "side": "L",
+   "t": 0.5,
+   "ang_deg": 0
+  }
+ }
+}

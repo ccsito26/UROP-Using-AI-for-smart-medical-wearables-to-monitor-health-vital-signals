@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RSAF Sensing Shirt Viewer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+:root{--bg:#f5f3ee;--panel:#ffffff;--ink:#1b2430;--muted:#5b6470;--line:#dcd8cf;--accent:#c2410c;--blue:#1f5f8b;--stage:#e9e6df}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14171b;--panel:#1c2026;--ink:#e8eaed;--muted:#a0a7b0;--line:#2c323a;--accent:#f97316;--blue:#60a5fa;--stage:#20252c;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#14171b;--panel:#1c2026;--ink:#e8eaed;--muted:#a0a7b0;--line:#2c323a;--accent:#f97316;--blue:#60a5fa;--stage:#20252c;color-scheme:dark}
+*{box-sizing:border-box}html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;display:flex;flex-direction:column}
+header{padding-block:14px 10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));border-bottom:1px solid var(--line)}
+h1{font:600 18px/1.2 Georgia,serif;margin:0 0 2px}header p{margin:0;color:var(--muted);font-size:13px}
+main{flex:1;display:grid;grid-template-columns:1fr 320px;min-height:0}
+#stage{position:relative;background:var(--stage);min-height:360px}
+#stage canvas{display:block;width:100%;height:100%}
+#hint{position:absolute;left:12px;bottom:10px;font-size:12px;color:var(--muted);pointer-events:none}
+aside{background:var(--panel);border-left:1px solid var(--line);padding-block:14px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));overflow:auto}
+h2{font:600 12px/1 system-ui;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:16px 0 8px}
+h2:first-child{margin-top:0}
+.row{display:flex;align-items:center;gap:8px;margin:6px 0}
+input[type=range]{flex:1;accent-color:var(--accent)}
+.views{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button{font:inherit;font-size:12px;padding:6px 4px;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:6px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+label.mod{display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--line);cursor:pointer}
+label.mod:last-child{border-bottom:0}
+.sw{width:12px;height:12px;border-radius:3px;margin-top:3px;flex:none;border:1px solid var(--line)}
+.mod b{display:block;font-weight:600;font-size:13px}.mod span{color:var(--muted);font-size:12px}
+.note{font-size:12px;color:var(--muted);margin-top:12px}
+@media (max-width:760px){main{grid-template-columns:1fr;grid-template-rows:60vh auto}aside{border-left:0;border-top:1px solid var(--line)}}
+</style>
+</head>
+<body>
+<header>
+  <h1>RSAF heat-strain shirt with detachable sensing patches</h1>
+  <p>Concept 3D model, size M. Drag to rotate, scroll to zoom, right-drag to pan. Drawings UROP-HSS-001 to 005 give the dimensions.</p>
+</header>
+<main>
+  <div id="stage"><div id="hint">Loading model…</div></div>
+  <aside>
+    <h2>View</h2>
+    <div class="views"><button data-v="back">Back</button><button data-v="front">Front</button><button data-v="side">Side</button><button data-v="iso">Iso</button></div>
+    <div class="row"><span style="width:92px">Explode</span><input id="explode" type="range" min="0" max="2.5" step="0.01" value="0"></div>
+    <div class="row"><span style="width:92px">Shirt opacity</span><input id="opacity" type="range" min="0" max="1" step="0.01" value="0.55"></div>
+    <h2>Modules</h2>
+    <div id="mods"></div>
+    <p class="note">The traces are drawn about 2.5× thicker than real so they show up. The arm pod (M4) is an optional fallback for heart rate.</p>
+  </aside>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script>
+const GLB_B64 = "__GLB__";
+const INFO = {
+ "Shirt": ["Base shirt", "Compression-fit 80/20 polyester–elastane, washable"],
+ "Dock (on shirt)": ["Docks on shirt", "TPU panel, 4 female magnetic snaps, Ø50 mesh window, pogo plate"],
+ "M1 Back thermal-gait patch": ["M1 Back patch", "Insulated skin temp, 128 Hz IMU for gait, sweat/wetness; detachable"],
+ "M2 Collar hub pod": ["M2 Hub pod", "ESP32-S3, ECG front end, battery, haptic and buzzer alerts; detachable"],
+ "M3 Textile ECG electrodes": ["M3 ECG electrodes", "Silver-knit, inside front at xiphoid level; stay in the wash"],
+ "Traces (in shirt)": ["Conductive traces", "Silver thread under TPU tape: I²C ×4, ECG ×2"],
+ "M4 Optional arm HR pod": ["M4 Arm HR pod (option)", "Upper-arm optical heart rate fallback"]
+};
+const stage = document.getElementById('stage'), hint = document.getElementById('hint');
+const renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); stage.appendChild(renderer.domElement);
+renderer.outputEncoding = THREE.sRGBEncoding;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(35, 1, 0.01, 20);
+const controls = new THREE.OrbitControls(camera, renderer.domElement); controls.enableDamping = true;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8a80, 0.9));
+const d1 = new THREE.DirectionalLight(0xffffff, 0.8); d1.position.set(1, 2, -2); scene.add(d1);
+const d2 = new THREE.DirectionalLight(0xffffff, 0.5); d2.position.set(-1, 1, 2); scene.add(d2);
+const groups = {}; const target = new THREE.Vector3(0, 0.42, 0);
+function resize(){ const w = stage.clientWidth, h = stage.clientHeight; renderer.setSize(w, h, false); camera.aspect = w/h; camera.updateProjectionMatrix(); }
+addEventListener('resize', resize);
+function setView(v){
+  const r = 1.9; const p = {back:[0,0.45,-r], front:[0,0.45,r], side:[r,0.45,0], iso:[-1.25,0.9,-1.35]}[v];
+  camera.position.set(p[0], p[1], p[2]); controls.target.copy(target); controls.update();
+}
+document.querySelectorAll('[data-v]').forEach(b => b.onclick = () => setView(b.dataset.v));
+const bin = Uint8Array.from(atob(GLB_B64), c => c.charCodeAt(0)).buffer;
+new THREE.GLTFLoader().parse(bin, '', gltf => {
+  scene.add(gltf.scene);
+  gltf.scene.traverse(o => {
+    if (o.userData && o.userData.explode) { groups[o.name] = {node:o, ex:new THREE.Vector3().fromArray(o.userData.explode)}; }
+  });
+  const mods = document.getElementById('mods');
+  Object.entries(groups).forEach(([name, g]) => {
+    let col = '#888'; g.node.traverse(m => { if (m.isMesh && col === '#888') col = '#' + m.material.color.getHexString(); });
+    const key = Object.keys(INFO).find(k => k.replace(/\s/g, '_') === name); const [t, d] = INFO[key] || [name.replace(/_/g, ' '), ''];
+    const el = document.createElement('label'); el.className = 'mod';
+    el.innerHTML = `<input type="checkbox" checked><i class="sw" style="background:${col}"></i><div><b>${t}</b><span>${d}</span></div>`;
+    el.querySelector('input').onchange = e => { g.node.visible = e.target.checked; };
+    mods.appendChild(el);
+  });
+  const ex = document.getElementById('explode'), op = document.getElementById('opacity');
+  ex.oninput = () => Object.values(groups).forEach(g => g.node.position.copy(g.ex).multiplyScalar(+ex.value));
+  op.oninput = () => groups['Shirt'] && groups['Shirt'].node.traverse(m => { if (m.isMesh) { m.material.transparent = true; m.material.opacity = +op.value; m.material.depthWrite = +op.value > 0.95; } });
+  op.oninput();
+  hint.textContent = 'Drag to rotate · scroll to zoom';
+  resize(); setView('back');
+}, err => { hint.textContent = 'Could not load the model.'; console.error(err); });
+(function loop(){ requestAnimationFrame(loop); controls.update(); renderer.render(scene, camera); })();
+resize();
+</script>
+</body>
+</html>

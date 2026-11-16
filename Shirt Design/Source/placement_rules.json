@@ -1,0 +1,123 @@
+{
+  "_about": "Placement evidence rules derived from the consolidated literature review (8 Nov 2026). Coordinates for size M: z = height above hem (mm), BNP at z = 700; dcb = surface distance from centre back; dcf = surface distance from centre front; 'side' = which half of the torso (back if dcb < C/4). Regions are tested in order; first match wins. Scores 0-1 are the team's reading of the evidence, not published values.",
+  "regions": [
+    {"id": "c7t2", "name": "Upper back, C7-T2 (below collar)", "side": "back", "z": [630, 705], "dcb": [0, 45]},
+    {"id": "shoulder_top", "name": "Shoulder top (trapezius)", "side": "any", "z": [610, 705], "dcb": [45, 9999]},
+    {"id": "interscap", "name": "Between scapulae, T2-T6", "side": "back", "z": [500, 630], "dcb": [0, 55]},
+    {"id": "scapula", "name": "Scapula (shoulder blade)", "side": "back", "z": [470, 640], "dcb": [55, 150]},
+    {"id": "midback", "name": "Mid back, T7-L1", "side": "back", "z": [290, 500], "dcb": [0, 130]},
+    {"id": "lowback", "name": "Lower back, L3-L5", "side": "back", "z": [90, 290], "dcb": [0, 100]},
+    {"id": "sternum", "name": "Sternum", "side": "front", "z": [420, 610], "dcf": [0, 40]},
+    {"id": "pectoral", "name": "Chest, pectoralis", "side": "front", "z": [430, 610], "dcf": [40, 160]},
+    {"id": "xiphoid", "name": "Lower chest, xiphoid level (ribs)", "side": "front", "z": [320, 430], "dcf": [0, 170]},
+    {"id": "abdomen", "name": "Abdomen", "side": "front", "z": [80, 320], "dcf": [0, 170]},
+    {"id": "hem", "name": "Hem / hip-belt band", "side": "any", "z": [0, 90]},
+    {"id": "side", "name": "Side / axilla", "side": "any", "z": [0, 705]}
+  ],
+  "sleeve_regions": [
+    {"id": "upper_arm_outer", "name": "Upper arm, lateral (deltoid-biceps)", "ang": [-110, 110]},
+    {"id": "upper_arm_inner", "name": "Upper arm, inner (near axilla)", "ang": [110, 250]}
+  ],
+  "gear": {
+    "rucksack": {"name": "Rucksack", "zones": [
+      {"id": "straps_back", "name": "rucksack shoulder strap", "side": "back", "z": [420, 705], "dcb": [60, 125], "effect": "rubbing and point pressure; keep rigid pods off"},
+      {"id": "straps_front", "name": "rucksack shoulder strap", "side": "front", "z": [450, 705], "dcf": [95, 155], "effect": "rubbing and point pressure; keep rigid pods off"},
+      {"id": "back_panel", "name": "rucksack back panel", "side": "back", "z": [250, 640], "dcb": [0, 150], "effect": "presses the item onto skin: good for skin contact if <= 7 mm thick, uncomfortable for thick pods"},
+      {"id": "hip_belt", "name": "hip belt", "side": "any", "z": [0, 95], "effect": "belt pressure and pack movement; avoid"}
+    ]},
+    "vest": {"name": "Load-bearing vest / plate carrier", "zones": [
+      {"id": "vest_front", "name": "vest front panel", "side": "front", "z": [300, 640], "dcf": [0, 175], "effect": "covered and compressed; item must be flat and heat-tolerant"},
+      {"id": "vest_back", "name": "vest back panel", "side": "back", "z": [300, 650], "dcb": [0, 175], "effect": "covered and compressed; item must be flat and heat-tolerant"}
+    ]}
+  },
+  "sensors": {
+    "temp": {"name": "Skin-temperature sensor (insulated)", "color": "#2563eb", "w": 50, "h": 50, "t": 6.6, "mount": "outside, through-window boss",
+      "scores": {
+        "c7t2": [0.95, "Insulated skin temperature at C7-T2 was the single strongest predictor of rectal temperature (SEE 0.27 °C).", "Richmond et al., 2015"],
+        "interscap": [0.9, "Insulated scapula skin temperature + heart rate estimated core with SEE 0.29 °C; scapula skin temperature + HR Kalman filter RMSE 0.25 °C.", "Eggenberger et al., 2018; Welles et al., 2018"],
+        "scapula": [0.85, "Scapula site: SEE 0.29 °C with HR (insulated); RMSE 0.25 °C in a Kalman filter.", "Eggenberger et al., 2018; Welles et al., 2018"],
+        "pectoral": [0.9, "Pectoralis gave the lowest Kalman-filter error (RMSE 0.18 °C with skin temp, heat flux and HR). Watch for vest coverage.", "Welles et al., 2018"],
+        "sternum": [0.88, "Sternum RMSE 0.20 °C with skin temp, heat flux and HR; chest skin + HR classified PSI >= 7.5 with 10% error.", "Welles et al., 2018; Buller et al., 2008"],
+        "xiphoid": [0.85, "Rib-cage site RMSE 0.18 °C with skin temp, heat flux and HR.", "Welles et al., 2018"],
+        "midback": [0.6, "Trunk site between validated upper-back and lower sites, but not tested directly in the reviewed studies.", "team assessment"],
+        "lowback": [0.5, "Not tested in the reviewed core-estimation studies; under the pack back panel.", "team assessment"],
+        "shoulder_top": [0.45, "Close to C7 but under shoulder straps; not a tested site.", "team assessment"],
+        "abdomen": [0.4, "Not a tested site; skin flaps and belt movement.", "team assessment"],
+        "side": [0.35, "Not a tested site; arm movement and airflow disturb skin temperature.", "team assessment"],
+        "hem": [0.2, "Not a tested site; hip-belt band.", "team assessment"]
+      }},
+    "imu": {"name": "Gait IMU (accelerometer)", "color": "#c2410c", "w": 30, "h": 26, "t": 8, "mount": "rigidly coupled to trunk",
+      "scores": {
+        "lowback": [0.95, "Reference site for trunk gait algorithms; valid and reliable for stride variables; regularity ICC 0.69-0.83.", "Moe-Nilssen & Helbostad, 2004; Del Din et al., 2016; Horsley et al., 2021; Kobayashi et al., 2014"],
+        "sternum": [0.9, "The only heat-stroke prediction studies used a chest sensor; chest agrees with lumbar on mean gait values but not on variability or asymmetry.", "Buller et al., 2022; Yaldiz et al., 2023; Camerlingo et al., 2024; Del Din et al., 2016"],
+        "xiphoid": [0.88, "Chest site as used by Buller et al. (2022); mean gait values agree with lumbar.", "Buller et al., 2022; Camerlingo et al., 2024"],
+        "pectoral": [0.75, "Chest, but off-midline: more arm and breathing motion.", "Del Din et al., 2016; team assessment"],
+        "midback": [0.75, "Trunk site between validated thoracic and lumbar sites; not directly validated.", "team assessment"],
+        "interscap": [0.72, "Upper-trunk harmonic ratio predicted falls (AUC 0.81); thoracic stride-event evidence unclear; anteroposterior harmonic ratio damped from pelvis to shoulder (8.85 to 5.48).", "Doi et al., 2013; Horsley et al., 2021; Mazzà et al., 2008"],
+        "c7t2": [0.68, "C7 is the upper-trunk site of Doi et al. (AUC 0.81), but damping is largest near the shoulders.", "Doi et al., 2013; Mazzà et al., 2008"],
+        "scapula": [0.4, "Scapula moves with the arm and shoulder girdle; not validated for gait.", "team assessment"],
+        "shoulder_top": [0.3, "No gait validation found for a shoulder-top sensor; shoulder-girdle and weapon-handling motion add non-gait acceleration.", "Horsley et al., 2021; team assessment"],
+        "abdomen": [0.55, "Near the pelvis but on soft tissue; not validated.", "team assessment"],
+        "side": [0.35, "Arm swing contaminates the signal; not validated.", "team assessment"],
+        "hem": [0.5, "Near the pelvis but loose hem and hip belt; not validated.", "team assessment"],
+        "sleeve": [0.2, "Wrist-hip stride variability agreement only rho 0.36-0.52; wrist detects walking less well than the lower back.", "Urbanek et al., 2018; Kluge et al., 2024"]
+      }},
+    "sweat": {"name": "Sweat / wetness sensor", "color": "#0891b2", "w": 40, "h": 40, "t": 3, "mount": "skin-facing textile electrodes",
+      "scores": {
+        "c7t2": [0.95, "Highest regional sweat rate was on the upper back.", "Coull et al., 2021; Smith & Havenith, 2011"],
+        "interscap": [0.95, "Highest regional sweat rate was on the upper back.", "Coull et al., 2021; Smith & Havenith, 2011"],
+        "scapula": [0.9, "Upper back: highest regional sweat rates.", "Coull et al., 2021"],
+        "midback": [0.85, "Central back sweats heavily.", "Coull et al., 2021; Smith & Havenith, 2011"],
+        "lowback": [0.75, "Back sweats more than limbs; below the upper-back maximum.", "Coull et al., 2021"],
+        "sternum": [0.75, "Torso front sweats heavily but less than the upper back.", "Smith & Havenith, 2011"],
+        "pectoral": [0.7, "Torso front; lower than upper back.", "Smith & Havenith, 2011"],
+        "xiphoid": [0.7, "Torso front; lower than upper back.", "Smith & Havenith, 2011"],
+        "abdomen": [0.6, "Torso front; lower than upper back.", "Smith & Havenith, 2011"],
+        "shoulder_top": [0.6, "Not a mapped maximum; strap rubbing.", "team assessment"],
+        "side": [0.5, "Lateral torso sweats less than the central back.", "Smith & Havenith, 2011"],
+        "hem": [0.4, "Hip-belt band.", "team assessment"],
+        "sleeve": [0.4, "Limbs sweat less than the torso.", "Smith & Havenith, 2011"]
+      }},
+    "ecgR": {"name": "ECG electrode, right", "color": "#94a3b8", "w": 42, "h": 78, "t": 0.8, "mount": "inside face, knitted in",
+      "scores": {
+        "xiphoid": [0.95, "Lower-chest band position used by ECG shirts; textile ECG is limited mainly by motion artefact.", "Pedrini Schuch et al., 2026"],
+        "pectoral": [0.8, "Across the heart, but more arm and pectoral muscle noise.", "Pedrini Schuch et al., 2026; team assessment"],
+        "sternum": [0.55, "Too close to the other electrode for a strong lead signal.", "team assessment"],
+        "side": [0.7, "Lateral chest still spans the heart; more arm motion.", "team assessment"],
+        "abdomen": [0.4, "Further from the heart: lower amplitude.", "team assessment"],
+        "midback": [0.3, "Back placement gives lower ECG amplitude; not in the reviewed studies.", "team assessment"],
+        "interscap": [0.3, "Back placement gives lower ECG amplitude.", "team assessment"],
+        "scapula": [0.3, "Back placement gives lower ECG amplitude.", "team assessment"],
+        "c7t2": [0.2, "Far from the heart axis.", "team assessment"],
+        "lowback": [0.15, "Far from the heart.", "team assessment"],
+        "shoulder_top": [0.25, "Far from the heart; strap rubbing.", "team assessment"],
+        "hem": [0.1, "Far from the heart.", "team assessment"]
+      }},
+    "hub": {"name": "Hub pod (ESP32-S3, battery, alerts)", "color": "#111827", "w": 64, "h": 34, "t": 13, "mount": "outside, magnetic pogo dock",
+      "scores": {
+        "c7t2": [0.85, "No physiological constraint. Short traces to an upper-back patch; reachable by the section commander.", "engineering choice"],
+        "interscap": [0.7, "Short traces, but a 13 mm pod sits under the pack back panel.", "engineering choice"],
+        "scapula": [0.6, "Under straps or pack panel; shoulder-blade motion.", "engineering choice"],
+        "pectoral": [0.7, "Soldier can feel and see it; covered by a vest.", "engineering choice"],
+        "sternum": [0.65, "Visible and accessible; covered by a vest.", "engineering choice"],
+        "xiphoid": [0.6, "Accessible; long traces to back sensors.", "engineering choice"],
+        "midback": [0.45, "Under the pack back panel.", "engineering choice"],
+        "lowback": [0.35, "Under the pack and near the hip belt.", "engineering choice"],
+        "shoulder_top": [0.4, "Under shoulder straps.", "engineering choice"],
+        "abdomen": [0.5, "Accessible; bends with the trunk.", "engineering choice"],
+        "side": [0.55, "Clear of pack and vest, but arm swing knocks it.", "engineering choice"],
+        "hem": [0.2, "Hip belt.", "engineering choice"]
+      }},
+    "hr": {"name": "Optical HR pod (upper arm)", "color": "#374151", "w": 36, "h": 36, "t": 10, "mount": "sleeve pocket",
+      "scores": {
+        "upper_arm_outer": [0.95, "Upper-arm optical HR: bias -0.05 bpm, MAPE 1.35% vs chest-strap ECG.", "Schweizer & Gilgen-Ammann, 2025"],
+        "upper_arm_inner": [0.8, "Upper arm, but sleeve rubbing near the axilla.", "Schweizer & Gilgen-Ammann, 2025; team assessment"],
+        "torso": [0.0, "Optical HR pod is designed for the upper arm (wrist MAPE 6.82% was much worse).", "Schweizer & Gilgen-Ammann, 2025"]
+      }}
+  },
+  "rules": {
+    "ecg_min_separation_mm": 150,
+    "i2c_max_trace_mm": 400,
+    "ecg_max_trace_mm": 650
+  }
+}

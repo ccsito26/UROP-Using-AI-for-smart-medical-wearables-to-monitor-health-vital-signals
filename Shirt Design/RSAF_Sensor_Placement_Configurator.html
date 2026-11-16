@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body>
+<title>Sensor Placement Configurator</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Archivo:wght@600;700&display=swap">
+<style>
+/* Layout: engineering workbench — 3D stage + evidence rail on top, live dimensioned flats below */
+:root{
+  --bg:#f3f2ee; --panel:#ffffff; --ink:#18202b; --muted:#5d6672; --line:#d9d6ce; --stage:#e7e5df;
+  --accent:#b4471a; --good:#15803d; --mid:#b45309; --bad:#b91c1c; --trace:#c2410c; --sel:#1d4ed8;
+  --f-display:"Archivo",system-ui,sans-serif; --f-body:"IBM Plex Sans",system-ui,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121519;--panel:#1a1e24;--ink:#e6e8eb;--muted:#9aa3ad;--line:#2b313a;--stage:#1d2229;--accent:#f0864f;--good:#4ade80;--mid:#fbbf24;--bad:#f87171;--trace:#fb923c;--sel:#93c5fd;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#121519;--panel:#1a1e24;--ink:#e6e8eb;--muted:#9aa3ad;--line:#2b313a;--stage:#1d2229;--accent:#f0864f;--good:#4ade80;--mid:#fbbf24;--bad:#f87171;--trace:#fb923c;--sel:#93c5fd;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 var(--f-body);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px 28px}
+h1{font:700 22px/1.15 var(--f-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+.sub{color:var(--muted);margin:4px 0 0;max-width:80ch}
+h2{font:600 11px/1 var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.top{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between;margin-bottom:12px}
+.presets{display:flex;flex-wrap:wrap;gap:6px}
+button,select{font:inherit;font-size:12.5px;padding:6px 10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;cursor:pointer}
+button:hover{border-color:var(--accent)} button.on{border-color:var(--accent);color:var(--accent)}
+button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--sel);outline-offset:2px}
+.work{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:12px}
+#stage{position:relative;background:var(--stage);border:1px solid var(--line);border-radius:8px;height:min(70vh,640px);min-height:380px;overflow:hidden}
+#stage canvas{display:block;width:100%;height:100%;touch-action:none}
+.overlay{position:absolute;left:10px;top:10px;display:flex;flex-direction:column;gap:6px;max-width:calc(100% - 20px)}
+.chiprow{display:flex;flex-wrap:wrap;gap:6px}
+.legend{position:absolute;left:10px;bottom:10px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:11.5px;color:var(--muted)}
+.ramp{height:8px;width:160px;border-radius:2px;background:linear-gradient(90deg,#b91c1c,#f59e0b 50%,#16a34a);margin:4px 0 2px}
+.views{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+.phys{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center;font-size:12.5px}.phys select{width:100%}
+aside{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:14px;min-width:0;max-height:min(70vh,640px);overflow:auto}
+.mods{display:flex;flex-direction:column;gap:4px}
+.mod{display:grid;grid-template-columns:12px 1fr auto;gap:8px;align-items:center;padding:6px 8px;border:1px solid transparent;border-radius:6px;cursor:pointer;text-align:left;background:transparent}
+.mod.sel{border-color:var(--sel)} .mod:hover{border-color:var(--line)}
+.dot{width:12px;height:12px;border-radius:3px}
+.pill{font:500 11px/1 var(--f-mono);padding:4px 6px;border-radius:99px;color:#fff;white-space:nowrap}
+.card{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:8px}
+.card h3{font:700 15px/1.2 var(--f-display);margin:0}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:12.5px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden}.bar i{display:block;height:100%}
+.why{font-size:12.5px;margin:0}.cite{font-size:12px;color:var(--muted);margin:0}
+.warn{font-size:12.5px;margin:0;padding-left:16px}.warn li{margin:2px 0}
+.ok{color:var(--good)}.w{color:var(--mid)}.b{color:var(--bad)}
+label.tg{display:flex;gap:6px;align-items:center;font-size:12.5px;cursor:pointer}
+.lower{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:12px;margin-top:12px}
+.sheet{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px;min-width:0}
+.svgwrap{overflow-x:auto}
+svg text{font-family:var(--f-mono)}
+table{border-collapse:collapse;width:100%;font-size:12px;font-variant-numeric:tabular-nums}
+th,td{border-bottom:1px solid var(--line);padding:5px 6px;text-align:left}th{color:var(--muted);font-weight:500}
+.tablewrap{overflow-x:auto}
+textarea{width:100%;min-height:150px;font:12px/1.4 var(--f-mono);background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px}
+.refs{font-size:12px;color:var(--muted);padding-left:18px}.refs li{margin:3px 0}
+.hint{font-size:12px;color:var(--muted);margin:0}
+@media (max-width:900px){.work,.lower{grid-template-columns:1fr} aside{max-height:none}
+ #stage{height:auto;display:flex;flex-direction:column} #stage canvas{order:2;height:440px!important} .overlay{position:static;order:0;padding:10px 10px 0;max-width:none}
+ .views{position:static;order:1;align-items:flex-start;padding:8px 10px} .views .chiprow{justify-content:flex-start!important} .views .hint{text-align:left!important;margin-left:0!important}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="top">
+  <div>
+    <h1>Sensor Placement Configurator</h1>
+    <p class="sub">RSAF heat-strain shirt, size M. The shirt is a cloth simulation on a moving mannequin: pick a fit and a motion, and each sensor's live skin gap is reported. Drag any sensor on the 3D shirt. The shirt colours show how strongly the consolidated literature review supports each spot for the selected sensor, and the flats below redraw with dimensions from the back neck point (BNP), centre back (CB) and centre front (CF).</p>
+  </div>
+  <div class="presets" role="group" aria-label="Presets">
+    <button data-p="revA" class="on">Review recommendation (Rev A)</button>
+    <button data-p="lim">Mr Lim: shoulder-top IMU</button>
+    <button data-p="chest">Chest IMU (Buller 2022 style)</button>
+    <button data-p="lumbar">Lower-back IMU reference</button>
+  </div>
+</div>
+
+<div class="work">
+  <div id="stage">
+    <div class="overlay">
+      <div class="chiprow">
+        <label class="tg"><input type="checkbox" id="heat" checked> Evidence heatmap for</label>
+        <select id="heatFor" aria-label="Heatmap sensor"></select>
+      </div>
+      <div class="chiprow">
+        <label class="tg"><input type="checkbox" id="gearRuck" checked> Rucksack zones</label>
+        <label class="tg"><input type="checkbox" id="gearVest"> Vest zones</label>
+        <label class="tg"><input type="checkbox" id="bundle" checked> Keep temp + IMU + sweat together as M1 patch</label>
+        <label class="tg"><input type="checkbox" id="mirror" checked> Mirror ECG pair</label>
+      </div>
+    </div>
+    <div class="views"><div class="chiprow" style="justify-content:flex-end"><button data-v="back">Back</button><button data-v="front">Front</button><button data-v="left">Left</button><button data-v="right">Right</button></div><div class="chiprow" role="group" aria-label="Mouse mode" style="justify-content:flex-end"><button data-mouse="sensors" class="on">Move sensors</button><button data-mouse="fabric">Pull fabric</button></div><p class="hint" id="mouseHint" style="text-align:right;max-width:240px;margin-left:auto">Drag a sensor to move it; drag empty space to rotate.</p></div>
+    <div class="legend"><div>Evidence for <b id="legendFor"></b></div><div class="ramp"></div><div style="display:flex;justify-content:space-between;width:160px"><span>avoid</span><span>weak</span><span>strong</span></div><div id="gearKey">Hatched blue-grey = gear contact zone</div></div>
+  </div>
+  <aside>
+    <div><h2>Fabric physics</h2>
+      <div class="phys">
+        <label class="tg" style="grid-column:1/-1"><input type="checkbox" id="physOn" checked> Simulate cloth (gravity, stretch, friction on skin)</label>
+        <label for="fit">Fit</label><select id="fit"><option value="compression">Compression (3.5% under body girth)</option><option value="regular">Regular (5% ease)</option><option value="loose">Loose (14% ease)</option></select>
+        <label for="motion">Motion</label><select id="motion"><option value="still">Standing still</option><option value="walk">Marching (0.9 Hz stride)</option><option value="run">Running (1.35 Hz stride)</option></select>
+        <label class="tg" style="grid-column:1/-1"><input type="checkbox" id="wind"> Head wind (gusting)</label>
+        <label class="tg" style="grid-column:1/-1"><input type="checkbox" id="dummy" checked> Show mannequin</label>
+        <div style="grid-column:1/-1"><button id="resetCloth" type="button">Reset cloth</button></div>
+      </div>
+      <p class="hint" style="margin-top:6px">Each sensor adds its mass to the fabric under it. Skin gap is measured every frame between the fabric under each footprint and the body.</p></div>
+    <div><h2>Sensors · drag on the shirt or pick here</h2><div class="mods" id="mods"></div></div>
+    <div class="card" id="detail"></div>
+    <div class="card"><h2>Configuration checks</h2><ul class="warn" id="checks"></ul></div>
+  </aside>
+</div>
+
+<div class="lower">
+  <div class="sheet">
+    <h2>Live 2D placement drawing · garment flats, scale shown in mm · selected item dimensioned</h2>
+    <div class="svgwrap"><svg id="flats" viewBox="0 0 1000 560" width="100%" role="img" aria-label="Front and back flats with sensor placements"></svg></div>
+    <div class="tablewrap"><table id="coords"></table></div>
+  </div>
+  <div class="sheet" style="display:flex;flex-direction:column;gap:10px">
+    <h2>Placement file (placement.json)</h2>
+    <p class="hint">Copy this into <code>Shirt Design\Source\placement.json</code>, then run <code>python build_all.py</code> to regenerate the 3D model, drawing set and DXF at these positions. Paste a saved file and press Apply to load it here.</p>
+    <textarea id="json" spellcheck="false" aria-label="Placement JSON"></textarea>
+    <div style="display:flex;gap:6px;flex-wrap:wrap"><button id="copy">Copy JSON</button><button id="apply">Apply pasted JSON</button><span id="msg" class="hint" role="status"></span></div>
+    <h2 style="margin-top:6px">Sources behind the scores</h2>
+    <ol class="refs" id="refs"></ol>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+const RULES = {"_about": "Placement evidence rules derived from the consolidated literature review (8 Nov 2026). Coordinates for size M: z = height above hem (mm), BNP at z = 700; dcb = surface distance from centre back; dcf = surface distance from centre front; 'side' = which half of the torso (back if dcb < C/4). Regions are tested in order; first match wins. Scores 0-1 are the team's reading of the evidence, not published values.", "regions": [{"id": "c7t2", "name": "Upper back, C7-T2 (below collar)", "side": "back", "z": [630, 705], "dcb": [0, 45]}, {"id": "shoulder_top", "name": "Shoulder top (trapezius)", "side": "any", "z": [610, 705], "dcb": [45, 9999]}, {"id": "interscap", "name": "Between scapulae, T2-T6", "side": "back", "z": [500, 630], "dcb": [0, 55]}, {"id": "scapula", "name": "Scapula (shoulder blade)", "side": "back", "z": [470, 640], "dcb": [55, 150]}, {"id": "midback", "name": "Mid back, T7-L1", "side": "back", "z": [290, 500], "dcb": [0, 130]}, {"id": "lowback", "name": "Lower back, L3-L5", "side": "back", "z": [90, 290], "dcb": [0, 100]}, {"id": "sternum", "name": "Sternum", "side": "front", "z": [420, 610], "dcf": [0, 40]}, {"id": "pectoral", "name": "Chest, pectoralis", "side": "front", "z": [430, 610], "dcf": [40, 160]}, {"id": "xiphoid", "name": "Lower chest, xiphoid level (ribs)", "side": "front", "z": [320, 430], "dcf": [0, 170]}, {"id": "abdomen", "name": "Abdomen", "side": "front", "z": [80, 320], "dcf": [0, 170]}, {"id": "hem", "name": "Hem / hip-belt band", "side": "any", "z": [0, 90]}, {"id": "side", "name": "Side / axilla", "side": "any", "z": [0, 705]}], "sleeve_regions": [{"id": "upper_arm_outer", "name": "Upper arm, lateral (deltoid-biceps)", "ang": [-110, 110]}, {"id": "upper_arm_inner", "name": "Upper arm, inner (near axilla)", "ang": [110, 250]}], "gear": {"rucksack": {"name": "Rucksack", "zones": [{"id": "straps_back", "name": "rucksack shoulder strap", "side": "back", "z": [420, 705], "dcb": [60, 125], "effect": "rubbing and point pressure; keep rigid pods off"}, {"id": "straps_front", "name": "rucksack shoulder strap", "side": "front", "z": [450, 705], "dcf": [95, 155], "effect": "rubbing and point pressure; keep rigid pods off"}, {"id": "back_panel", "name": "rucksack back panel", "side": "back", "z": [250, 640], "dcb": [0, 150], "effect": "presses the item onto skin: good for skin contact if <= 7 mm thick, uncomfortable for thick pods"}, {"id": "hip_belt", "name": "hip belt", "side": "any", "z": [0, 95], "effect": "belt pressure and pack movement; avoid"}]}, "vest": {"name": "Load-bearing vest / plate carrier", "zones": [{"id": "vest_front", "name": "vest front panel", "side": "front", "z": [300, 640], "dcf": [0, 175], "effect": "covered and compressed; item must be flat and heat-tolerant"}, {"id": "vest_back", "name": "vest back panel", "side": "back", "z": [300, 650], "dcb": [0, 175], "effect": "covered and compressed; item must be flat and heat-tolerant"}]}}, "sensors": {"temp": {"name": "Skin-temperature sensor (insulated)", "color": "#2563eb", "w": 50, "h": 50, "t": 6.6, "mount": "outside, through-window boss", "scores": {"c7t2": [0.95, "Insulated skin temperature at C7-T2 was the single strongest predictor of rectal temperature (SEE 0.27 \u00b0C).", "Richmond et al., 2015"], "interscap": [0.9, "Insulated scapula skin temperature + heart rate estimated core with SEE 0.29 \u00b0C; scapula skin temperature + HR Kalman filter RMSE 0.25 \u00b0C.", "Eggenberger et al., 2018; Welles et al., 2018"], "scapula": [0.85, "Scapula site: SEE 0.29 \u00b0C with HR (insulated); RMSE 0.25 \u00b0C in a Kalman filter.", "Eggenberger et al., 2018; Welles et al., 2018"], "pectoral": [0.9, "Pectoralis gave the lowest Kalman-filter error (RMSE 0.18 \u00b0C with skin temp, heat flux and HR). Watch for vest coverage.", "Welles et al., 2018"], "sternum": [0.88, "Sternum RMSE 0.20 \u00b0C with skin temp, heat flux and HR; chest skin + HR classified PSI >= 7.5 with 10% error.", "Welles et al., 2018; Buller et al., 2008"], "xiphoid": [0.85, "Rib-cage site RMSE 0.18 \u00b0C with skin temp, heat flux and HR.", "Welles et al., 2018"], "midback": [0.6, "Trunk site between validated upper-back and lower sites, but not tested directly in the reviewed studies.", "team assessment"], "lowback": [0.5, "Not tested in the reviewed core-estimation studies; under the pack back panel.", "team assessment"], "shoulder_top": [0.45, "Close to C7 but under shoulder straps; not a tested site.", "team assessment"], "abdomen": [0.4, "Not a tested site; skin flaps and belt movement.", "team assessment"], "side": [0.35, "Not a tested site; arm movement and airflow disturb skin temperature.", "team assessment"], "hem": [0.2, "Not a tested site; hip-belt band.", "team assessment"]}}, "imu": {"name": "Gait IMU (accelerometer)", "color": "#c2410c", "w": 30, "h": 26, "t": 8, "mount": "rigidly coupled to trunk", "scores": {"lowback": [0.95, "Reference site for trunk gait algorithms; valid and reliable for stride variables; regularity ICC 0.69-0.83.", "Moe-Nilssen & Helbostad, 2004; Del Din et al., 2016; Horsley et al., 2021; Kobayashi et al., 2014"], "sternum": [0.9, "The only heat-stroke prediction studies used a chest sensor; chest agrees with lumbar on mean gait values but not on variability or asymmetry.", "Buller et al., 2022; Yaldiz et al., 2023; Camerlingo et al., 2024; Del Din et al., 2016"], "xiphoid": [0.88, "Chest site as used by Buller et al. (2022); mean gait values agree with lumbar.", "Buller et al., 2022; Camerlingo et al., 2024"], "pectoral": [0.75, "Chest, but off-midline: more arm and breathing motion.", "Del Din et al., 2016; team assessment"], "midback": [0.75, "Trunk site between validated thoracic and lumbar sites; not directly validated.", "team assessment"], "interscap": [0.72, "Upper-trunk harmonic ratio predicted falls (AUC 0.81); thoracic stride-event evidence unclear; anteroposterior harmonic ratio damped from pelvis to shoulder (8.85 to 5.48).", "Doi et al., 2013; Horsley et al., 2021; Mazz\u00e0 et al., 2008"], "c7t2": [0.68, "C7 is the upper-trunk site of Doi et al. (AUC 0.81), but damping is largest near the shoulders.", "Doi et al., 2013; Mazz\u00e0 et al., 2008"], "scapula": [0.4, "Scapula moves with the arm and shoulder girdle; not validated for gait.", "team assessment"], "shoulder_top": [0.3, "No gait validation found for a shoulder-top sensor; shoulder-girdle and weapon-handling motion add non-gait acceleration.", "Horsley et al., 2021; team assessment"], "abdomen": [0.55, "Near the pelvis but on soft tissue; not validated.", "team assessment"], "side": [0.35, "Arm swing contaminates the signal; not validated.", "team assessment"], "hem": [0.5, "Near the pelvis but loose hem and hip belt; not validated.", "team assessment"], "sleeve": [0.2, "Wrist-hip stride variability agreement only rho 0.36-0.52; wrist detects walking less well than the lower back.", "Urbanek et al., 2018; Kluge et al., 2024"]}}, "sweat": {"name": "Sweat / wetness sensor", "color": "#0891b2", "w": 40, "h": 40, "t": 3, "mount": "skin-facing textile electrodes", "scores": {"c7t2": [0.95, "Highest regional sweat rate was on the upper back.", "Coull et al., 2021; Smith & Havenith, 2011"], "interscap": [0.95, "Highest regional sweat rate was on the upper back.", "Coull et al., 2021; Smith & Havenith, 2011"], "scapula": [0.9, "Upper back: highest regional sweat rates.", "Coull et al., 2021"], "midback": [0.85, "Central back sweats heavily.", "Coull et al., 2021; Smith & Havenith, 2011"], "lowback": [0.75, "Back sweats more than limbs; below the upper-back maximum.", "Coull et al., 2021"], "sternum": [0.75, "Torso front sweats heavily but less than the upper back.", "Smith & Havenith, 2011"], "pectoral": [0.7, "Torso front; lower than upper back.", "Smith & Havenith, 2011"], "xiphoid": [0.7, "Torso front; lower than upper back.", "Smith & Havenith, 2011"], "abdomen": [0.6, "Torso front; lower than upper back.", "Smith & Havenith, 2011"], "shoulder_top": [0.6, "Not a mapped maximum; strap rubbing.", "team assessment"], "side": [0.5, "Lateral torso sweats less than the central back.", "Smith & Havenith, 2011"], "hem": [0.4, "Hip-belt band.", "team assessment"], "sleeve": [0.4, "Limbs sweat less than the torso.", "Smith & Havenith, 2011"]}}, "ecgR": {"name": "ECG electrode, right", "color": "#94a3b8", "w": 42, "h": 78, "t": 0.8, "mount": "inside face, knitted in", "scores": {"xiphoid": [0.95, "Lower-chest band position used by ECG shirts; textile ECG is limited mainly by motion artefact.", "Pedrini Schuch et al., 2026"], "pectoral": [0.8, "Across the heart, but more arm and pectoral muscle noise.", "Pedrini Schuch et al., 2026; team assessment"], "sternum": [0.55, "Too close to the other electrode for a strong lead signal.", "team assessment"], "side": [0.7, "Lateral chest still spans the heart; more arm motion.", "team assessment"], "abdomen": [0.4, "Further from the heart: lower amplitude.", "team assessment"], "midback": [0.3, "Back placement gives lower ECG amplitude; not in the reviewed studies.", "team assessment"], "interscap": [0.3, "Back placement gives lower ECG amplitude.", "team assessment"], "scapula": [0.3, "Back placement gives lower ECG amplitude.", "team assessment"], "c7t2": [0.2, "Far from the heart axis.", "team assessment"], "lowback": [0.15, "Far from the heart.", "team assessment"], "shoulder_top": [0.25, "Far from the heart; strap rubbing.", "team assessment"], "hem": [0.1, "Far from the heart.", "team assessment"]}}, "hub": {"name": "Hub pod (ESP32-S3, battery, alerts)", "color": "#111827", "w": 64, "h": 34, "t": 13, "mount": "outside, magnetic pogo dock", "scores": {"c7t2": [0.85, "No physiological constraint. Short traces to an upper-back patch; reachable by the section commander.", "engineering choice"], "interscap": [0.7, "Short traces, but a 13 mm pod sits under the pack back panel.", "engineering choice"], "scapula": [0.6, "Under straps or pack panel; shoulder-blade motion.", "engineering choice"], "pectoral": [0.7, "Soldier can feel and see it; covered by a vest.", "engineering choice"], "sternum": [0.65, "Visible and accessible; covered by a vest.", "engineering choice"], "xiphoid": [0.6, "Accessible; long traces to back sensors.", "engineering choice"], "midback": [0.45, "Under the pack back panel.", "engineering choice"], "lowback": [0.35, "Under the pack and near the hip belt.", "engineering choice"], "shoulder_top": [0.4, "Under shoulder straps.", "engineering choice"], "abdomen": [0.5, "Accessible; bends with the trunk.", "engineering choice"], "side": [0.55, "Clear of pack and vest, but arm swing knocks it.", "engineering choice"], "hem": [0.2, "Hip belt.", "engineering choice"]}}, "hr": {"name": "Optical HR pod (upper arm)", "color": "#374151", "w": 36, "h": 36, "t": 10, "mount": "sleeve pocket", "scores": {"upper_arm_outer": [0.95, "Upper-arm optical HR: bias -0.05 bpm, MAPE 1.35% vs chest-strap ECG.", "Schweizer & Gilgen-Ammann, 2025"], "upper_arm_inner": [0.8, "Upper arm, but sleeve rubbing near the axilla.", "Schweizer & Gilgen-Ammann, 2025; team assessment"], "torso": [0.0, "Optical HR pod is designed for the upper arm (wrist MAPE 6.82% was much worse).", "Schweizer & Gilgen-Ammann, 2025"]}}}, "rules": {"ecg_min_separation_mm": 150, "i2c_max_trace_mm": 400, "ecg_max_trace_mm": 650}};
+const REFS = ["Buller, M. J., Latzka, W. A., Yokota, M., Tharion, W. J., & Moran, D. S. (2008). A real-time heat strain risk classifier using heart rate and skin temperature. <i>Physiological Measurement, 29</i>(12), N79\u2013N85. https://doi.org/10.1088/0967-3334/29/12/N01", "Buller, M., Fellin, R., Bursey, M., Galer, M., Atkinson, E., Beidleman, B. A., Marcello, M. J., Driver, K., Mesite, T., Seay, J., Weed, L., Telfer, B., King, C., Frazee, R., Moore, C., & Williamson, J. R. (2022). Gait instability and estimated core temperature predict exertional heat stroke. <i>British Journal of Sports Medicine, 56</i>(8), 446\u2013451. https://doi.org/10.1136/bjsports-2021-104081", "Camerlingo, N., Cai, X., Adamowicz, L., Welbourn, M., Psaltos, D. J., Zhang, H., Messere, A., Selig, J., Lin, W., Sheriff, P., Demanuele, C., Santamaria, M., & Karahanoglu, F. I. (2024). Measuring gait parameters from a single chest-worn accelerometer in healthy individuals: A validation study. <i>Scientific Reports, 14</i>(1), Article 13897. https://doi.org/10.1038/s41598-024-62330-6", "Coull, N. A., West, A. M., Hodder, S. G., Wheeler, P., & Havenith, G. (2021). Body mapping of regional sweat distribution in young and older males. <i>European Journal of Applied Physiology, 121</i>(1), 109\u2013125. https://doi.org/10.1007/s00421-020-04503-5", "Del Din, S., Hickey, A., Hurwitz, N., Mathers, J. C., Rochester, L., & Godfrey, A. (2016). Measuring gait with an accelerometer-based wearable: Influence of device location, testing protocol and age. <i>Physiological Measurement, 37</i>(10), 1785\u20131797. https://doi.org/10.1088/0967-3334/37/10/1785", "Doi, T., Hirata, S., Ono, R., Tsutsumimoto, K., Misu, S., & Ando, H. (2013). The harmonic ratio of trunk acceleration predicts falling among older people: Results of a 1-year prospective study. <i>Journal of NeuroEngineering and Rehabilitation, 10</i>, Article 7. https://doi.org/10.1186/1743-0003-10-7", "Eggenberger, P., MacRae, B. A., Kemp, S., B\u00fcrgisser, M., Rossi, R. M., & Annaheim, S. (2018). Prediction of core body temperature based on skin temperature, heat flux, and heart rate under different exercise and clothing conditions in the heat in young adult males. <i>Frontiers in Physiology, 9</i>, Article 1780. https://doi.org/10.3389/fphys.2018.01780", "Horsley, B. J., Tofari, P. J., Halson, S. L., Kemp, J. G., Dickson, J., Maniar, N., & Cormack, S. J. (2021). Does site matter? Impact of inertial measurement unit placement on the validity and reliability of stride variables during running: A systematic review and meta-analysis. <i>Sports Medicine, 51</i>(7), 1449\u20131489. https://doi.org/10.1007/s40279-021-01443-8", "Kluge, F., Brand, Y. E., Mic\u00f3-Amigo, M. E., Bertuletti, S., D'Ascanio, I., Gazit, E., Bonci, T., Kirk, C., K\u00fcderle, A., Palmerini, L., Paraschiv-Ionescu, A., Salis, F., Soltani, A., Ullrich, M., Alcock, L., Aminian, K., Becker, C., Brown, P., Buekers, J., \u2026 Mueller, A. (2024). Real-world gait detection using a wrist-worn inertial sensor: Validation study. <i>JMIR Formative Research, 8</i>, Article e50035. https://doi.org/10.2196/50035", "Kobayashi, H., Kakihana, W., & Kimura, T. (2014). Combined effects of age and gender on gait symmetry and regularity assessed by autocorrelation of trunk acceleration. <i>Journal of NeuroEngineering and Rehabilitation, 11</i>, Article 109. https://doi.org/10.1186/1743-0003-11-109", "Mazz\u00e0, C., Iosa, M., Pecoraro, F., & Cappozzo, A. (2008). Control of the upper body accelerations in young and elderly women during level walking. <i>Journal of NeuroEngineering and Rehabilitation, 5</i>, Article 30. https://doi.org/10.1186/1743-0003-5-30", "Moe-Nilssen, R., & Helbostad, J. L. (2004). Estimation of gait cycle characteristics by trunk accelerometry. <i>Journal of Biomechanics, 37</i>(1), 121\u2013126. https://doi.org/10.1016/S0021-9290(03)00233-1", "Pedrini Schuch, C., Chaves, G., Moineau, B., Bennett, S., Pirbaglou, M., Lobo, E. M., & Alizadeh-Meghrazi, M. (2026). Applications of smart textiles for ambulatory electrocardiogram monitoring: Scoping review of the literature. <i>JMIR Cardio, 10</i>, Article e74261. https://doi.org/10.2196/74261", "Richmond, V. L., Davey, S., Griggs, K., & Havenith, G. (2015). Prediction of core body temperature from multiple variables. <i>Annals of Occupational Hygiene, 59</i>(9), 1168\u20131178. https://doi.org/10.1093/annhyg/mev054", "Schweizer, T., & Gilgen-Ammann, R. (2025). Wrist-worn and arm-worn wearables for monitoring heart rate during sedentary and light-to-vigorous physical activities: Device validation study. <i>JMIR Cardio, 9</i>, Article e67110. https://doi.org/10.2196/67110", "Smith, C. J., & Havenith, G. (2011). Body mapping of sweating patterns in male athletes in mild exercise-induced hyperthermia. <i>European Journal of Applied Physiology, 111</i>(7), 1391\u20131404. https://doi.org/10.1007/s00421-010-1744-8", "Urbanek, J. K., Zipunnikov, V., Harris, T., Crainiceanu, C., Harezlak, J., & Glynn, N. W. (2018). Validation of gait characteristics extracted from raw accelerometry during walking against measures of physical function, mobility, fatigability, and fitness. <i>The Journals of Gerontology: Series A, 73</i>(5), 676\u2013681. https://doi.org/10.1093/gerona/glx174", "Welles, A. P., Xu, X., Santee, W. R., Looney, D. P., Buller, M. J., Potter, A. W., & Hoyt, R. W. (2018). Estimation of core body temperature from skin temperature, heat flux, and heart rate using a Kalman filter. <i>Computers in Biology and Medicine, 99</i>, 1\u20136. https://doi.org/10.1016/j.compbiomed.2018.05.021", "Yaldiz, C. O., Buller, M. J., Richardson, K. L., An, S., Lin, D. J., Satish, A., Driver, K., Atkinson, E., Mesite, T., King, C., Bursey, M., Galer, M., Millard-Stafford, M., Sawka, M. N., Medda, A., & Inan, O. T. (2023). Early prediction of impending exertional heat stroke with wearable multimodal sensing and anomaly detection. <i>IEEE Journal of Biomedical and Health Informatics, 27</i>(12), 5803\u20135814. https://doi.org/10.1109/JBHI.2023.3323014"];
+// ---------- garment geometry (size M, mm) — same model as the CAD scripts ----------
+const TZ=[0,120,260,400,470,530,590,640,675,700], TA=[172,165,170,182,186,188,196,150,95,72], TB=[118,112,118,128,130,126,112,95,72,62];
+const NEXP=2.6, BNP=700, SL={rootZ:560, rootX:185, len:210, r0:78, r1:66, droop:28*Math.PI/180};
+function interp(z,a){ if(z<=TZ[0])return a[0]; for(let i=1;i<TZ.length;i++){ if(z<=TZ[i]){const t=(z-TZ[i-1])/(TZ[i]-TZ[i-1]); return a[i-1]+t*(a[i]-a[i-1]);} } return a[a.length-1]; }
+function tp(z,th){ const a=interp(z,TA), b=interp(z,TB), c=Math.cos(th), s=Math.sin(th), e=2/NEXP; return [a*Math.sign(c)*Math.pow(Math.abs(c),e), b*Math.sign(s)*Math.pow(Math.abs(s),e), z]; }
+const ARC=new Map(), NS=720;
+function arc(z){ const k=Math.round(Math.max(0,Math.min(705,z))); if(ARC.has(k))return ARC.get(k);
+  const th=new Float64Array(NS+1), d=new Float64Array(NS+1); let prev=tp(k,-Math.PI/2);
+  for(let i=0;i<=NS;i++){ th[i]=-Math.PI/2+2*Math.PI*i/NS; const p=tp(k,th[i]); d[i]= i? d[i-1]+Math.hypot(p[0]-prev[0],p[1]-prev[1]) : 0; prev=p; }
+  const r={th,d,C:d[NS]}; ARC.set(k,r); return r; }
+function lerpTab(x,xs,ys){ let lo=0,hi=xs.length-1; while(hi-lo>1){const m=(lo+hi)>>1; if(xs[m]<=x)lo=m; else hi=m;} const t=(x-xs[lo])/((xs[hi]-xs[lo])||1); return ys[lo]+t*(ys[hi]-ys[lo]); }
+function sToTh(s,z){ const A=arc(z); let ss=((s%A.C)+A.C)%A.C; return lerpTab(ss,A.d,A.th); }
+function thToS(th,z){ const A=arc(z); let t=th; while(t< -Math.PI/2)t+=2*Math.PI; while(t>=1.5*Math.PI)t-=2*Math.PI; let s=lerpTab(t,A.th,A.d); if(s>A.C/2)s-=A.C; return s; }
+
+// ---------- evidence model ----------
+function inR(v,r){ return !r || (v>=r[0] && v<=r[1]); }
+function where(s,z){ const C=arc(z).C, dcb=Math.abs(s), dcf=C/2-Math.abs(s), back=dcb<C/4; return {C,dcb,dcf,back,side: s>=0?'R':'L'}; }
+function region(s,z){ const w=where(s,z); for(const r of RULES.regions){ if(r.side==='back'&&!w.back)continue; if(r.side==='front'&&w.back)continue;
+  if(!inR(z,r.z))continue; if(r.dcb&&!inR(w.dcb,r.dcb))continue; if(r.dcf&&!inR(w.dcf,r.dcf))continue; return r; } return RULES.regions[RULES.regions.length-1]; }
+function gearAt(s,z){ const w=where(s,z), out=[]; for(const [gk,g] of Object.entries(RULES.gear)){ if(!gearOn[gk])continue; for(const zn of g.zones){
+  if(zn.side==='back'&&!w.back)continue; if(zn.side==='front'&&w.back)continue; if(!inR(z,zn.z))continue; if(zn.dcb&&!inR(w.dcb,zn.dcb))continue; if(zn.dcf&&!inR(w.dcf,zn.dcf))continue; out.push(zn);} } return out; }
+function sensorRules(k){ return RULES.sensors[k==='ecgL'?'ecgR':k]; }
+function scoreAt(k,place){ const S=sensorRules(k);
+  if(place.kind==='sleeve'){ if(k==='hr'){ const a=((place.ang*180/Math.PI)%360+360)%360; const rid=(a<=110||a>=250)?'upper_arm_outer':'upper_arm_inner'; const r=RULES.sleeve_regions.find(x=>x.id===rid); return {score:S.scores[rid][0],why:S.scores[rid][1],cite:S.scores[rid][2],region:r.name}; }
+    const v=S.scores.sleeve||[0,'This item belongs on the torso.','—']; return {score:v[0],why:v[1],cite:v[2],region:'Sleeve'}; }
+  const r=region(place.s,place.z); if(k==='hr'){ const v=S.scores.torso; return {score:v[0],why:v[1],cite:v[2],region:r.name}; }
+  const v=S.scores[r.id]||[0.3,'No specific evidence for this site in the review.','team assessment']; return {score:v[0],why:v[1],cite:v[2],region:r.name}; }
+const ramp=(x)=>{ const c1=[185,28,28],c2=[245,158,11],c3=[22,163,74]; const t=Math.max(0,Math.min(1,x)); const [a,b,u]= t<.5?[c1,c2,t/.5]:[c2,c3,(t-.5)/.5]; return a.map((v,i)=>Math.round(v+(b[i]-v)*u)); };
+const label=(x)=> x>=.85?'Strong':x>=.65?'Moderate':x>=.45?'Weak':'Avoid';
+const pillCol=(x)=>`rgb(${ramp(x).join(',')})`;
+
+// ---------- cloth physics core (position-based dynamics; no THREE dependency) ----------
+// Units: mm, seconds, grams. GL frame: x right, y up, z front. Body = mannequin; shirt = particle grid.
+const PHYS = { g: 9810, damping: 0.985, substeps: 2, iters: 6, kStruct: 1.0, kShear: 0.85, kBend: 0.22,
+  fabricGsm: 160, BODYK: 0.95, friction: { compression: 0.85, regular: 0.55, loose: 0.3 }, fitScale: { compression: 0.965, regular: 1.05, loose: 1.14 } };
+const CNTH = 96, CNZ = 44, SNA = 32, SNT = 12;     // torso columns x rows; sleeve angles x rings
+function bodyA(z){ return z > BNP ? 58 : interp(z, TA) * PHYS.BODYK; }
+function bodyB(z){ return z > BNP ? 52 : interp(z, TB) * PHYS.BODYK; }
+const ARM = { joint: (side) => [side * 168, 560, 0], len: 300, r: 48 };
+
+function makeCloth(fit){
+  const k = PHYS.fitScale[fit];
+  const nT = CNTH * CNZ, nS = 2 * SNA * SNT, n = nT + nS;
+  const C = { fit, n, nT, pos: new Float32Array(n * 3), prev: new Float32Array(n * 3), rest: new Float32Array(n * 3),
+    w: new Float32Array(n), w0: new Float32Array(n), sz: new Float32Array(nT * 2), sl: new Float32Array(nS * 3), noBody: new Uint8Array(n),
+    cons: [], grab: -1, grabT: [0, 0, 0], gap: new Float32Array(n) };
+  // torso rest shape = body x fit scale (circumferential), body surface + 1 mm offset where tighter than body
+  for (let i = 0; i < CNTH; i++) { const th = -Math.PI / 2 + 2 * Math.PI * i / CNTH;
+    for (let j = 0; j < CNZ; j++) { const z = BNP * j / (CNZ - 1), id = i * CNZ + j;
+      const c = Math.cos(th), s = Math.sin(th), e = 2 / NEXP;
+      const ux = Math.sign(c) * Math.pow(Math.abs(c), e), uy = Math.sign(s) * Math.pow(Math.abs(s), e);
+      const restScale = k, initScale = Math.max(k, 1.0) + 0.006;
+      C.rest.set([bodyA(z) * restScale * ux, z, bodyB(z) * restScale * uy], id * 3);
+      C.pos.set([bodyA(z) * initScale * ux, z, bodyB(z) * initScale * uy], id * 3);
+      C.sz[id * 2] = thToS(th, z); C.sz[id * 2 + 1] = z; } }
+  // sleeves (attached to torso by the first ring)
+  const d = SL.droop;
+  for (let si = 0; si < 2; si++) { const side = si === 0 ? 1 : -1;
+    const ax = [side * Math.cos(d), -Math.sin(d), 0], up = [side * Math.sin(d), Math.cos(d), 0], fw = [0, 0, 1];
+    for (let a = 0; a < SNA; a++) { const ang = 2 * Math.PI * a / SNA;
+      for (let t = 0; t < SNT; t++) { const tt = t / (SNT - 1), id = nT + (si * SNA + a) * SNT + t;
+        const rT = SL.r0 + (SL.r1 - SL.r0) * tt, hug = fit === 'compression' ? Math.min(1, tt / 0.35) : 0, hs = hug * hug * (3 - 2 * hug);   // compression sleeve tapers onto the arm
+        const r = fit === 'compression' ? rT * (1 - hs) + ARM.r * 0.97 * hs : rT * Math.max(1, Math.min(1.1, k)), L = tt * SL.len;
+        const nx = Math.cos(ang) * up[0] + Math.sin(ang) * fw[0], ny = Math.cos(ang) * up[1] + Math.sin(ang) * fw[1], nz = Math.cos(ang) * up[2] + Math.sin(ang) * fw[2];
+        const rx = fit === 'compression' ? SL.rootX * (1 - hs) + ARM.joint(1)[0] * hs : SL.rootX; const p = [side * rx + ax[0] * L + r * nx, SL.rootZ + ax[1] * L + r * ny, ax[2] * L + r * nz];
+        C.rest.set(p, id * 3); C.pos.set(p, id * 3); C.sl.set([side, tt, ang], (id - nT) * 3); if (t < 2) C.noBody[id] = 1; } } }
+  C.prev.set(C.pos);
+  // masses: fabric areal density spread per particle
+  const pm = PHYS.fabricGsm * 1e-6 * (2 * Math.PI * 160 / CNTH) * (BNP / (CNZ - 1));   // g per particle (~0.06 g)
+  for (let p = 0; p < n; p++) { C.w0[p] = 1 / pm; C.w[p] = C.w0[p]; }
+  // constraints
+  const add = (a, b, kk) => { const dx = C.rest[a*3]-C.rest[b*3], dy = C.rest[a*3+1]-C.rest[b*3+1], dz = C.rest[a*3+2]-C.rest[b*3+2]; C.cons.push(a, b, Math.hypot(dx, dy, dz), kk); };
+  const T = (i, j) => ((i + CNTH) % CNTH) * CNZ + j;
+  for (let i = 0; i < CNTH; i++) for (let j = 0; j < CNZ; j++) {
+    if (j + 1 < CNZ) add(T(i, j), T(i, j + 1), PHYS.kStruct);
+    add(T(i, j), T(i + 1, j), PHYS.kStruct);
+    if (j + 1 < CNZ) { add(T(i, j), T(i + 1, j + 1), PHYS.kShear); add(T(i + 1, j), T(i, j + 1), PHYS.kShear); }
+    if (j + 2 < CNZ) add(T(i, j), T(i, j + 2), PHYS.kBend);
+    add(T(i, j), T(i + 2, j), PHYS.kBend); }
+  for (let si = 0; si < 2; si++) { const S = (a, t) => nT + (si * SNA + ((a + SNA) % SNA)) * SNT + t;
+    for (let a = 0; a < SNA; a++) for (let t = 0; t < SNT; t++) {
+      if (t + 1 < SNT) { add(S(a, t), S(a, t + 1), PHYS.kStruct); add(S(a, t), S(a + 1, t + 1), PHYS.kShear); }
+      add(S(a, t), S(a + 1, t), PHYS.kStruct); if (t + 2 < SNT) add(S(a, t), S(a, t + 2), PHYS.kBend); }
+    // attach first ring to nearest torso particles
+    for (let a = 0; a < SNA; a++) { const p = S(a, 0); let best = -1, bd = 1e9;
+      for (let q = 0; q < nT; q++) { const dd = (C.rest[q*3]-C.rest[p*3])**2 + (C.rest[q*3+1]-C.rest[p*3+1])**2 + (C.rest[q*3+2]-C.rest[p*3+2])**2; if (dd < bd) { bd = dd; best = q; } }
+      add(p, best, 1.0); C.cons[C.cons.length - 2] = Math.min(C.cons[C.cons.length - 2], 4); } }
+  C.cons = Float64Array.from(C.cons);
+  // shoulder support: yoke rows (z >= 640) rest on the body's shoulders; anchor = body surface point (body-local)
+  const anc = [];
+  for (let i = 0; i < CNTH; i++) for (let j = 0; j < CNZ; j++) { const z = BNP * j / (CNZ - 1); if (z < 640) continue;
+    const id = i * CNZ + j, th = -Math.PI / 2 + 2 * Math.PI * i / CNTH, c = Math.cos(th), s = Math.sin(th), e = 2 / NEXP;
+    const ux = Math.sign(c) * Math.pow(Math.abs(c), e), uy = Math.sign(s) * Math.pow(Math.abs(s), e);
+    anc.push(id, bodyA(z) * ux * 1.004 + ux * 0.8, z, bodyB(z) * uy * 1.004 + uy * 0.8, z >= 680 ? 0.5 : 0.25); }
+  C.anchor = Float64Array.from(anc);
+  // long-range attachments: no particle may hang further than 3% beyond its rest distance from its column's yoke row / sleeve root ring
+  const teth = [], jTop = Math.ceil(640 / BNP * (CNZ - 1)), rd = (a, b) => Math.hypot(C.rest[a*3]-C.rest[b*3], C.rest[a*3+1]-C.rest[b*3+1], C.rest[a*3+2]-C.rest[b*3+2]);
+  for (let i = 0; i < CNTH; i++) for (let j = 0; j < jTop; j++) { const p = i * CNZ + j, q = i * CNZ + jTop; let L = 0; for (let jj = j; jj < jTop; jj++) L += rd(i * CNZ + jj, i * CNZ + jj + 1); teth.push(p, q, L * 1.03); }
+  for (let si = 0; si < 2; si++) for (let a = 0; a < SNA; a++) { const q = nT + (si * SNA + a) * SNT; for (let t = 2; t < SNT; t++) { const p = q + t; let L = 0; for (let tt = 0; tt < t; tt++) L += rd(q + tt, q + tt + 1); teth.push(p, q, L * 1.03); } }
+  C.teth = Float64Array.from(teth);
+  return C;
+}
+
+// body pose: translation, yaw (about y) and arm swing angles, plus previous pose for surface velocity
+function bodyPose(t, motion){
+  if (motion === 'walk') { const f = 0.9, w = 2 * Math.PI * f; return { tx: 0, ty: 7 * Math.abs(Math.sin(w * t)) - 3.5, tz: 0, yaw: 0.05 * Math.sin(w * t), roll: 0.02 * Math.sin(w * t), swing: [0.33 * Math.sin(w * t), -0.33 * Math.sin(w * t)] }; }
+  if (motion === 'run') { const f = 1.35, w = 2 * Math.PI * f; return { tx: 0, ty: 28 * Math.abs(Math.sin(w * t)) - 14, tz: 0, yaw: 0.09 * Math.sin(w * t), roll: 0.03 * Math.sin(w * t), swing: [0.65 * Math.sin(w * t), -0.65 * Math.sin(w * t)] }; }
+  return { tx: 0, ty: 0, tz: 0, yaw: 0, roll: 0, swing: [0, 0] };
+}
+function toLocal(P, p){ // world -> body local (inverse yaw/roll, translation)
+  let x = p[0] - P.tx, y = p[1] - P.ty - 430, z = p[2] - P.tz;
+  const cy = Math.cos(-P.yaw), sy = Math.sin(-P.yaw); let x1 = cy * x + sy * z, z1 = -sy * x + cy * z;
+  const cr = Math.cos(-P.roll), sr = Math.sin(-P.roll); let x2 = cr * x1 - sr * y, y2 = sr * x1 + cr * y;
+  return [x2, y2 + 430, z1]; }
+function toWorld(P, q){
+  let x = q[0], y = q[1] - 430, z = q[2];
+  const cr = Math.cos(P.roll), sr = Math.sin(P.roll); let x1 = cr * x - sr * y, y1 = sr * x + cr * y;
+  const cy = Math.cos(P.yaw), sy = Math.sin(P.yaw); let x2 = cy * x1 + sy * z, z2 = -sy * x1 + cy * z;
+  return [x2 + P.tx, y1 + 430 + P.ty, z2 + P.tz]; }
+function armSeg(P, side){ // world-space segment of the arm capsule
+  const si = side > 0 ? 0 : 1, j = ARM.joint(side), d = SL.droop, sw = P.swing[si];
+  const dir = [side * Math.cos(d), -Math.sin(d) * Math.cos(sw), -Math.sin(d) * Math.sin(sw)];
+  const a = toWorld(P, j), b = toWorld(P, [j[0] + dir[0] * ARM.len, j[1] + dir[1] * ARM.len, j[2] + dir[2] * ARM.len]); return [a, b]; }
+
+// body surface query in body-local coords (y up): returns gap (+ outside) and outward unit normal (implicit-surface gradient)
+const _S = { gap: 0, nx: 0, ny: 0, nz: 0 };
+function bodyQuery(x, y, z){
+  const yy = Math.max(0, y), a = bodyA(yy), b = bodyB(yy), da = (bodyA(yy + 2) - bodyA(yy - 2)) / 4, db = (bodyB(yy + 2) - bodyB(yy - 2)) / 4;
+  const ux = Math.abs(x / a), uz = Math.abs(z / b), px = Math.pow(ux, NEXP), pz = Math.pow(uz, NEXP), F = px + pz;
+  const r = Math.sqrt(x * x + z * z) || 1e-6, k = Math.pow(F || 1e-9, -1 / NEXP);
+  let gx = NEXP * px / (x || 1e-9), gz = NEXP * pz / (z || 1e-9), gy = y > 0 ? -NEXP * (px * da / a + pz * db / b) : 0;
+  const gl = Math.sqrt(gx * gx + gy * gy + gz * gz) || 1e-9; gx /= gl; gy /= gl; gz /= gl;
+  const cosr = (gx * x + gz * z) / r;                      // radial vs normal
+  _S.gap = (r - r * k) * Math.max(0.2, cosr); _S.nx = gx; _S.ny = gy; _S.nz = gz; return _S;
+}
+const GRIP = { compression: [0.9, 0.6], regular: [0.6, 0.3], loose: [0.35, 0.12] };   // [kinetic factor, static threshold mm]
+function collide(C, P, Pp, measure){
+  const pos = C.pos, prev = C.prev, n = C.n, [muK, muS] = GRIP[C.fit];
+  const cy = Math.cos(P.yaw), sy = Math.sin(P.yaw), cr = Math.cos(P.roll), sr = Math.sin(P.roll);
+  const cyp = Math.cos(Pp.yaw), syp = Math.sin(Pp.yaw), crp = Math.cos(Pp.roll), srp = Math.sin(Pp.roll);
+  const arms = [armSeg(P, 1), armSeg(P, -1)];
+  for (let p = 0; p < n; p++) { if (C.w[p] === 0) continue; const i = p * 3;
+    if (measure) C.gap[p] = 1e9;
+    if (!C.noBody[p]) {
+      // world -> local
+      let x = pos[i] - P.tx, y = pos[i+1] - P.ty - 430, z = pos[i+2] - P.tz;
+      let x1 = cy * x - sy * z, z1 = sy * x + cy * z; let lx = cr * x1 + sr * y, ly = -sr * x1 + cr * y + 430, lz = z1;
+      if (ly > -20 && ly < BNP + 120) { const S = bodyQuery(lx, ly, lz); if (measure) C.gap[p] = S.gap;
+        if (S.gap < 0.6) { const d = 0.6 - S.gap; lx += S.nx * d; ly += S.ny * d; lz += S.nz * d;
+          // local -> world (current and previous pose) for surface velocity
+          let yy = ly - 430, X1 = cr * lx - sr * yy, Y1 = sr * lx + cr * yy;
+          const wx = cy * X1 + sy * lz + P.tx, wy = Y1 + 430 + P.ty, wz = -sy * X1 + cy * lz + P.tz;
+          X1 = crp * lx - srp * yy; Y1 = srp * lx + crp * yy;
+          const bx = wx - (cyp * X1 + syp * lz + Pp.tx), by = wy - (Y1 + 430 + Pp.ty), bz = wz - (-syp * X1 + cyp * lz + Pp.tz);
+          pos[i] = wx; pos[i+1] = wy; pos[i+2] = wz;
+          // friction (position based): tangential motion relative to the body this substep
+          const nwx = cy * (cr * S.nx - sr * S.ny) + sy * S.nz, nwy = sr * S.nx + cr * S.ny, nwz = -sy * (cr * S.nx - sr * S.ny) + cy * S.nz;
+          let dx = pos[i] - prev[i] - bx, dy = pos[i+1] - prev[i+1] - by, dz = pos[i+2] - prev[i+2] - bz; const dn = dx * nwx + dy * nwy + dz * nwz;
+          dx -= dn * nwx; dy -= dn * nwy; dz -= dn * nwz; const dt = Math.sqrt(dx * dx + dy * dy + dz * dz);
+          const f = dt < muS ? 1 : muK; pos[i] -= dx * f; pos[i+1] -= dy * f; pos[i+2] -= dz * f; } } }
+    if (p >= C.nT) { for (const [A, B] of arms) { const abx = B[0]-A[0], aby = B[1]-A[1], abz = B[2]-A[2];
+      let u = ((pos[i]-A[0])*abx + (pos[i+1]-A[1])*aby + (pos[i+2]-A[2])*abz) / (abx*abx + aby*aby + abz*abz); u = Math.max(0, Math.min(1, u));
+      const cx = A[0] + abx*u, cy2 = A[1] + aby*u, cz = A[2] + abz*u, dx = pos[i]-cx, dy = pos[i+1]-cy2, dz = pos[i+2]-cz, dd = Math.sqrt(dx*dx+dy*dy+dz*dz) || 1e-6;
+      if (measure && u > 0.02) C.gap[p] = Math.min(C.gap[p], dd - ARM.r);
+      if (dd < ARM.r + 0.6) { const s = (ARM.r + 0.6) / dd; pos[i] = cx + dx*s; pos[i+1] = cy2 + dy*s; pos[i+2] = cz + dz*s; } } } }
+}
+
+function stepCloth(C, t, dt, motion, wind){
+  const h = dt / PHYS.substeps, g = PHYS.g * h * h, n = C.n, pos = C.pos, prev = C.prev;
+  let P = bodyPose(t, motion);
+  for (let ss = 0; ss < PHYS.substeps; ss++) {
+    const tt = t - dt + (ss + 1) * h; P = bodyPose(tt, motion); const Pp = bodyPose(tt - h, motion);
+    const windF = wind ? (2500 + 1800 * Math.sin(tt * 2.3) + 900 * Math.sin(tt * 7.1)) * h * h : 0;
+    for (let p = 0; p < n; p++) { if (C.w[p] === 0) continue; const i = p * 3;
+      const vx = (pos[i] - prev[i]) * PHYS.damping, vy = (pos[i+1] - prev[i+1]) * PHYS.damping, vz = (pos[i+2] - prev[i+2]) * PHYS.damping;
+      prev[i] = pos[i]; prev[i+1] = pos[i+1]; prev[i+2] = pos[i+2];
+      pos[i] += vx; pos[i+1] += vy - g; pos[i+2] += vz - windF * (0.6 + 0.4 * Math.sin(p * 0.37)); }
+    const cons = C.cons, m = cons.length, w = C.w;
+    for (let it = 0; it < PHYS.iters; it++) {
+      if (C.grab >= 0) { const i = C.grab * 3; pos[i] = C.grabT[0]; pos[i+1] = C.grabT[1]; pos[i+2] = C.grabT[2]; }
+      for (let c = 0; c < m; c += 4) { const ia = cons[c], ib = cons[c+1], wa = w[ia], wb = w[ib], ws = wa + wb; if (ws === 0) continue;
+        const a = ia * 3, b = ib * 3, dx = pos[b] - pos[a], dy = pos[b+1] - pos[a+1], dz = pos[b+2] - pos[a+2], d = Math.sqrt(dx*dx + dy*dy + dz*dz) || 1e-6;
+        const s = cons[c+3] * (d - cons[c+2]) / (d * ws);
+        pos[a] += dx * s * wa; pos[a+1] += dy * s * wa; pos[a+2] += dz * s * wa;
+        pos[b] -= dx * s * wb; pos[b+1] -= dy * s * wb; pos[b+2] -= dz * s * wb; }
+      { const T = C.teth, w = C.w; for (let c = 0; c < T.length; c += 3) { const p = T[c], q = T[c+1]; if (w[p] === 0) continue; const a = p * 3, b = q * 3;
+          const dx = pos[a] - pos[b], dy = pos[a+1] - pos[b+1], dz = pos[a+2] - pos[b+2], d = Math.sqrt(dx*dx + dy*dy + dz*dz); if (d > T[c+2]) { const s = T[c+2] / d; pos[a] = pos[b] + dx * s; pos[a+1] = pos[b+1] + dy * s; pos[a+2] = pos[b+2] + dz * s; } } }
+      { const A = C.anchor, cyA = Math.cos(P.yaw), syA = Math.sin(P.yaw), crA = Math.cos(P.roll), srA = Math.sin(P.roll);
+        for (let q = 0; q < A.length; q += 5) { const p = A[q], i = p * 3; if (w[p] === 0) continue; const k = A[q+4];
+          const lx = A[q+1], yy = A[q+2] - 430, lz = A[q+3], X1 = crA * lx - srA * yy, Y1 = srA * lx + crA * yy;
+          const tx = cyA * X1 + syA * lz + P.tx, ty = Y1 + 430 + P.ty, tz = -syA * X1 + cyA * lz + P.tz;
+          pos[i] += (tx - pos[i]) * k; pos[i+1] += (ty - pos[i+1]) * k; pos[i+2] += (tz - pos[i+2]) * k; } }
+      if (it === (PHYS.iters >> 1) || it === PHYS.iters - 1) collide(C, P, Pp, it === PHYS.iters - 1 && ss === PHYS.substeps - 1);
+    }
+  }
+  return P;
+}
+// module mass: spread over the footprint particles (rest s,z within the module rectangle)
+function footprint(C, s0, z0, w, h){ const out = []; for (let p = 0; p < C.nT; p++) { let ds = C.sz[p*2] - s0; const Cc = arc(C.sz[p*2+1]).C; if (ds > Cc/2) ds -= Cc; if (ds < -Cc/2) ds += Cc;
+  if (Math.abs(ds) <= w / 2 + 6 && Math.abs(C.sz[p*2+1] - z0) <= h / 2 + 6) out.push(p); } return out; }
+function sleeveFootprint(C, side, t, ang){ const out = []; for (let p = C.nT; p < C.n; p++) { const q = (p - C.nT) * 3; if (C.sl[q] !== side) continue;
+  let da = C.sl[q+2] - ang; da = Math.atan2(Math.sin(da), Math.cos(da)); if (Math.abs(C.sl[q+1] - t) < 0.12 && Math.abs(da) < 0.45) out.push(p); } return out; }
+function applyMasses(C, items){ C.w.set(C.w0); for (const it of items) { if (!it.idx.length) continue; const add = it.mass / it.idx.length;
+  for (const p of it.idx) C.w[p] = 1 / (1 / C.w0[p] + add); } }
+
+// ---------- scene (cloth-simulated shirt on a moving mannequin) ----------
+const stage=document.getElementById('stage');
+const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true}); renderer.setPixelRatio(Math.min(devicePixelRatio,2)); stage.prepend(renderer.domElement);
+const scene=new THREE.Scene(); const camera=new THREE.PerspectiveCamera(32,1,5,8000);
+const controls=new THREE.OrbitControls(camera,renderer.domElement); controls.enableDamping=true; controls.target.set(0,430,0);
+scene.add(new THREE.HemisphereLight(0xffffff,0x9a9a90,0.85)); const L1=new THREE.DirectionalLight(0xffffff,0.55); L1.position.set(600,1400,-1200); scene.add(L1); const L2=new THREE.DirectionalLight(0xffffff,0.45); L2.position.set(-800,900,1200); scene.add(L2);
+const BASE=[86,96,70], RIB=[52,60,42];
+const SIM={fit:'compression',motion:'still',wind:false,on:true,t:0,mouse:'sensors',pose:bodyPose(0,'still')};
+let CL=makeCloth(SIM.fit);
+// torso mesh bound to the particle grid
+const tIdx=[]; for(let i=0;i<CNTH;i++){ const i2=(i+1)%CNTH; for(let j=0;j<CNZ-1;j++){ const a=i*CNZ+j,b=i2*CNZ+j,c=i2*CNZ+j+1,d=i*CNZ+j+1; tIdx.push(a,b,c,a,c,d);} }
+const tGeo=new THREE.BufferGeometry(); const tPosAttr=new THREE.BufferAttribute(new Float32Array(CL.nT*3),3); tPosAttr.setUsage(THREE.DynamicDrawUsage);
+tGeo.setAttribute('position',tPosAttr); tGeo.setIndex(tIdx); const tCol=new Float32Array(CL.nT*3); tGeo.setAttribute('color',new THREE.BufferAttribute(tCol,3));
+const shirtMat=new THREE.MeshStandardMaterial({vertexColors:true,side:THREE.DoubleSide,roughness:.9,transparent:true,opacity:.92});
+const torso=new THREE.Mesh(tGeo,shirtMat); torso.frustumCulled=false; scene.add(torso);
+const sleeves=[]; for(let si=0;si<2;si++){ const idx=[]; for(let a=0;a<SNA;a++){ const a2=(a+1)%SNA; for(let t=0;t<SNT-1;t++){ const A=a*SNT+t,B=a2*SNT+t,Cc=a2*SNT+t+1,D=a*SNT+t+1; idx.push(A,B,Cc,A,Cc,D);} }
+  const g=new THREE.BufferGeometry(); const pa=new THREE.BufferAttribute(new Float32Array(SNA*SNT*3),3); pa.setUsage(THREE.DynamicDrawUsage); g.setAttribute('position',pa); g.setIndex(idx);
+  g.setAttribute('color',new THREE.BufferAttribute(new Float32Array(SNA*SNT*3),3)); const m=new THREE.Mesh(g,shirtMat); m.frustumCulled=false; m.userData={si,side:si===0?1:-1,off:CL.nT+si*SNA*SNT}; scene.add(m); sleeves.push(m); }
+function syncMeshes(){ tPosAttr.array.set(CL.pos.subarray(0,CL.nT*3)); tPosAttr.needsUpdate=true; tGeo.computeVertexNormals(); tGeo.computeBoundingSphere();
+  for(const m of sleeves){ const o=m.userData.off*3, pa=m.geometry.attributes.position; pa.array.set(CL.pos.subarray(o,o+SNA*SNT*3)); pa.needsUpdate=true; m.geometry.computeVertexNormals(); m.geometry.computeBoundingSphere(); } }
+// mannequin
+const bodyMat=new THREE.MeshStandardMaterial({color:0xb7ada0,roughness:.85});
+const bodyGroup=new THREE.Group(); scene.add(bodyGroup); const bodyInner=new THREE.Group(); bodyInner.position.y=-430; bodyGroup.add(bodyInner);
+{ const NA=72,NZb=40,pos=[],idx=[]; for(let i=0;i<NA;i++){ const th=2*Math.PI*i/NA, c=Math.cos(th), s=Math.sin(th), e=2/NEXP; for(let j=0;j<NZb;j++){ const z=-60+(BNP+150)*j/(NZb-1); const ux=Math.sign(c)*Math.pow(Math.abs(c),e), uy=Math.sign(s)*Math.pow(Math.abs(s),e); pos.push(bodyA(Math.max(0,z))*ux*0.995, z, bodyB(Math.max(0,z))*uy*0.995); } }
+  for(let i=0;i<NA;i++){ const i2=(i+1)%NA; for(let j=0;j<NZb-1;j++){ const a=i*NZb+j,b=i2*NZb+j,c=i2*NZb+j+1,d=i*NZb+j+1; idx.push(a,c,b,a,d,c);} }
+  const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); g.setIndex(idx); g.computeVertexNormals(); bodyInner.add(new THREE.Mesh(g,bodyMat)); }
+const armMeshes=[1,-1].map(()=>{ const m=new THREE.Mesh(new THREE.CylinderGeometry(ARM.r-1,ARM.r-6,ARM.len,24,1,false),bodyMat); scene.add(m); return m; });
+function syncBody(P){ bodyGroup.position.set(P.tx,430+P.ty,P.tz); bodyGroup.rotation.set(0,P.yaw,P.roll,'YZX');
+  [1,-1].forEach((side,k)=>{ const [A,B]=armSeg(P,side); const a=new THREE.Vector3(...A), b=new THREE.Vector3(...B); armMeshes[k].position.copy(a).add(b).multiplyScalar(.5); armMeshes[k].quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), b.clone().sub(a).normalize()); }); }
+
+// cloth lookups: (s,z) on the torso and (side,t,ang) on a sleeve -> current position and frame
+const _v=(i)=>new THREE.Vector3(CL.pos[i*3],CL.pos[i*3+1],CL.pos[i*3+2]);
+function gridPt(fi,fj){ const i0=Math.floor(fi), j0=Math.max(0,Math.min(CNZ-2,Math.floor(fj))), u=fi-i0, v=Math.max(0,Math.min(1,fj-j0)); const I=(i)=>((i%CNTH)+CNTH)%CNTH;
+  const p00=_v(I(i0)*CNZ+j0), p10=_v(I(i0+1)*CNZ+j0), p01=_v(I(i0)*CNZ+j0+1), p11=_v(I(i0+1)*CNZ+j0+1);
+  return p00.multiplyScalar((1-u)*(1-v)).addScaledVector(p10,u*(1-v)).addScaledVector(p01,(1-u)*v).addScaledVector(p11,u*v); }
+function clothAt(s,z){ const th=sToTh(s,z); const fi=(th+Math.PI/2)/(2*Math.PI)*CNTH, fj=z/BNP*(CNZ-1); return {fi,fj,o:gridPt(fi,fj)}; }
+function clothFrame(s,z){ const c=clothAt(s,z); const ts=gridPt(c.fi+0.5,c.fj).sub(gridPt(c.fi-0.5,c.fj)).normalize(); const tzv=gridPt(c.fi,Math.min(CNZ-1.01,c.fj+0.5)).sub(gridPt(c.fi,Math.max(0,c.fj-0.5))).normalize();
+  const n=new THREE.Vector3().crossVectors(ts,tzv).normalize(); const rad=c.o.clone().sub(new THREE.Vector3(SIM.pose.tx,c.o.y,SIM.pose.tz)); if(n.dot(rad)<0) n.negate();
+  const tz2=new THREE.Vector3().crossVectors(n,ts).normalize(); return {o:c.o,ts,tz:tz2,n}; }
+function sleevePt(si,fa,ft){ const off=CL.nT+si*SNA*SNT; const a0=Math.floor(fa), t0=Math.max(0,Math.min(SNT-2,Math.floor(ft))), u=fa-a0, v=Math.max(0,Math.min(1,ft-t0)); const A=(a)=>((a%SNA)+SNA)%SNA;
+  const q=(a,t)=>_v(off+A(a)*SNT+t); return q(a0,t0).multiplyScalar((1-u)*(1-v)).addScaledVector(q(a0+1,t0),u*(1-v)).addScaledVector(q(a0,t0+1),(1-u)*v).addScaledVector(q(a0+1,t0+1),u*v); }
+function sleeveClothFrame(side,t,ang){ const si=side>0?0:1, fa=(((ang%(2*Math.PI))+2*Math.PI)%(2*Math.PI))/(2*Math.PI)*SNA, ft=t*(SNT-1);
+  const o=sleevePt(si,fa,ft); const ts=sleevePt(si,fa,Math.min(SNT-1.01,ft+0.4)).sub(sleevePt(si,fa,Math.max(0,ft-0.4))).normalize();
+  const [A,B]=armSeg(SIM.pose,side); const a=new THREE.Vector3(...A), ab=new THREE.Vector3(...B).sub(a); const u=Math.max(0,Math.min(1,o.clone().sub(a).dot(ab)/ab.lengthSq()));
+  const n=o.clone().sub(a.clone().addScaledVector(ab,u)).normalize(); const tzv=new THREE.Vector3().crossVectors(n,ts).normalize(); return {o,ts,tz:tzv,n}; }
+
+// ---------- modules ----------
+const KEYS=['m1','temp','imu','sweat','hub','ecgR','ecgL','hr'];
+const NAMES={m1:'M1 back patch (temp + IMU + sweat)',temp:'Skin-temperature sensor',imu:'Gait IMU',sweat:'Sweat / wetness sensor',hub:'Hub pod',ecgR:'ECG electrode, right',ecgL:'ECG electrode, left',hr:'Optical HR pod (arm)'};
+const DIMS={m1:[84,104,6.6,'#2a2d31'],temp:[50,50,6.6,'#2563eb'],imu:[30,26,8,'#c2410c'],sweat:[40,40,3,'#0891b2'],hub:[64,34,13,'#111827'],ecgR:[42,78,0.8,'#cbd5e1'],ecgL:[42,78,0.8,'#cbd5e1'],hr:[36,36,10,'#374151']};
+const MASS={m1:30,temp:20,imu:10,sweat:8,hub:35,ecgR:4,ecgL:4,hr:15};       // grams (targets from drawing set)
+const CONTACT_NEEDED={temp:'skin',sweat:'skin',ecgR:'skin',ecgL:'skin',imu:'coupling',m1:'skin',hr:'skin'};
+const state={bundle:true,mirror:true,place:{}};
+const gearOn={rucksack:true,vest:false};
+const meshes={}, foot={}, contact={};
+function rrShape(w,h,r){ const s=new THREE.Shape(), x=-w/2,y=-h/2; s.moveTo(x+r,y); s.lineTo(x+w-r,y); s.quadraticCurveTo(x+w,y,x+w,y+r); s.lineTo(x+w,y+h-r); s.quadraticCurveTo(x+w,y+h,x+w-r,y+h); s.lineTo(x+r,y+h); s.quadraticCurveTo(x,y+h,x,y+h-r); s.lineTo(x,y+r); s.quadraticCurveTo(x,y,x+r,y); return s; }
+for(const k of KEYS){ const [w,h,t,col]=DIMS[k]; const geo=new THREE.ExtrudeGeometry(rrShape(w,h,Math.min(w,h)*0.2),{depth:t,bevelEnabled:true,bevelThickness:Math.min(1.5,t/3),bevelSize:1.2,bevelSegments:2,curveSegments:8});
+  const mat=new THREE.MeshStandardMaterial({color:col,roughness:k.startsWith('ecg')?.35:.5,metalness:k.startsWith('ecg')?.6:.05});
+  const m=new THREE.Mesh(geo,mat); m.userData.key=k; scene.add(m); meshes[k]=m; }
+const traceGroup=new THREE.Group(); scene.add(traceGroup);
+const selRing=new THREE.Mesh(new THREE.RingGeometry(0.93,1,64),new THREE.MeshBasicMaterial({color:0x1d4ed8,side:THREE.DoubleSide,depthTest:false,transparent:true})); selRing.renderOrder=10; scene.add(selRing);
+function visibleKey(k){ return k==='m1'? state.bundle : (['temp','imu','sweat'].includes(k)? !state.bundle : true); }
+function placeMesh(k){ const m=meshes[k], p=state.place[k]; if(!p){m.visible=false;return;} const vis=visibleKey(k); m.visible=vis; if(!vis)return;
+  const f= p.kind==='sleeve'? sleeveClothFrame(p.side,p.t,p.ang) : clothFrame(p.s,p.z);
+  const inside=k.startsWith('ecg'); const off= inside? -(DIMS[k][2]+1.6) : 1.0;
+  m.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(f.ts,f.tz,f.n)); m.position.copy(f.o).addScaledVector(f.n,off); }
+function effective(k){ if(['temp','imu','sweat'].includes(k)&&state.bundle) return state.place.m1; return state.place[k]; }
+function updateMasses(){ const items=[]; for(const k of KEYS){ const p=state.place[k]; if(!p||!visibleKey(k)){ foot[k]=[]; continue; }
+    foot[k]= p.kind==='sleeve'? sleeveFootprint(CL,p.side,p.t,p.ang) : footprint(CL,p.s,p.z,DIMS[k][0],DIMS[k][1]); items.push({idx:foot[k],mass:MASS[k]}); }
+  applyMasses(CL,items); }
+function measureContact(){ for(const k of KEYS){ const idx=foot[k]||[]; if(!idx.length){ contact[k]=null; continue; } let s=0,lift=0; for(const p of idx){ const g=Math.max(0,CL.gap[p]-0.6); s+=g; if(g>2)lift++; }
+    const g=s/idx.length, lf=lift/idx.length, c=contact[k]||{gap:g,lift:lf,peak:g}; c.gap=c.gap*0.9+g*0.1; c.lift=c.lift*0.9+lf*0.1; c.peak=Math.max(c.peak*0.995,g); contact[k]=c; } }
+function contactFor(k){ return contact[k==='temp'||k==='imu'||k==='sweat'? (state.bundle?'m1':k) : k]; }
+// traces in (s,z), drawn on the moving cloth
+function laneFor(k,hub){ return k==='ecgR'? hub.s+70 : k==='ecgL'? hub.s-70 : null; }
+function traceLen(a,b,lane){ const C=arc(a.z).C; const tg= lane==null? b.s : lane; let ds=Math.abs(a.s-tg); ds=Math.min(ds,C-ds); return ds+Math.abs(a.z-b.z)+(lane==null?0:Math.abs(lane-b.s)); }
+function tracePathSZ(a,b,lane){ const pts=[]; const C=arc(a.z).C; const tg= lane==null? b.s : lane; let ds=tg-a.s; if(ds>C/2)ds-=C; if(ds<-C/2)ds+=C; const n1=Math.max(2,Math.ceil(Math.abs(ds)/10));
+  for(let i=0;i<=n1;i++) pts.push([a.s+ds*i/n1,a.z]); const dz=b.z-a.z, n2=Math.max(2,Math.ceil(Math.abs(dz)/10)); for(let i=1;i<=n2;i++) pts.push([a.s+ds,a.z+dz*i/n2]);
+  if(lane!=null){ const d2=b.s-(a.s+ds), n3=Math.max(2,Math.ceil(Math.abs(d2)/10)); for(let i=1;i<=n3;i++) pts.push([a.s+ds+d2*i/n3,b.z]); } return pts; }
+let traceSZ=[];
+function buildTraces(){ traceGroup.clear(); traceSZ=[]; const hub=state.place.hub; const mat=new THREE.LineBasicMaterial({color:0xc2410c});
+  const wired= state.bundle? ['m1','ecgR','ecgL'] : ['temp','imu','sweat','ecgR','ecgL'];
+  for(const k of wired){ const p=state.place[k]; if(!p||p.kind!=='torso')continue; const sz=tracePathSZ(p,hub,laneFor(k,hub)); const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(sz.length*3),3)); const line=new THREE.Line(g,mat); line.frustumCulled=false; traceGroup.add(line); traceSZ.push([line,sz]); } }
+function syncTraces(){ for(const [line,sz] of traceSZ){ const a=line.geometry.attributes.position; sz.forEach(([s,z],i)=>{ const f=clothFrame(s,z); const p=f.o.addScaledVector(f.n,1.5); a.setXYZ(i,p.x,p.y,p.z); }); a.needsUpdate=true; } }
+function drawTraces(){ buildTraces(); syncTraces(); }
+
+
+// ---------- UI ----------
+const heat=document.getElementById('heat'), heatSel=document.getElementById('heatFor');
+for(const k of ['temp','imu','sweat','ecgR','hub','hr']){ const o=document.createElement('option'); o.value=k; o.textContent=RULES.sensors[k].name; heatSel.appendChild(o); }
+let selected='m1';
+function evalModule(k){ if(k==='m1'){ const p=state.place.m1; const parts=['temp','imu','sweat'].map(x=>({k:x,...scoreAt(x,p)})); const sc=parts.reduce((a,b)=>a+b.score,0)/3; return {score:sc,parts,region:parts[0].region}; }
+  return scoreAt(k,effective(k)); }
+function gearFor(k){ const p=effective(k); if(!p||p.kind!=='torso')return []; return gearAt(p.s,p.z); }
+function posText(p){ if(p.kind==='sleeve') return {a:`${p.side>0?'right':'left'} sleeve`, b:`${Math.round(p.t*100)}% along, ${Math.round(((p.ang*180/Math.PI)+360)%360)}° from top`};
+  const w=where(p.s,p.z); return {a:`${Math.round(BNP-p.z)} mm below BNP`, b: w.back? `${Math.round(w.dcb)} mm ${p.s>=0?'right':'left'} of CB (back)` : `${Math.round(w.dcf)} mm ${p.s>=0?'right':'left'} of CF (front)`}; }
+function listMods(){ const box=document.getElementById('mods'); box.innerHTML='';
+  const ks= state.bundle? ['m1','hub','ecgR','ecgL','hr'] : ['temp','imu','sweat','hub','ecgR','ecgL','hr'];
+  for(const k of ks){ const e=evalModule(k); const b=document.createElement('button'); b.className='mod'+(k===selected?' sel':''); b.type='button';
+    b.innerHTML=`<span class="dot" style="background:${DIMS[k][3]}"></span><span>${NAMES[k]}</span><span class="pill" style="background:${pillCol(e.score)}">${label(e.score)} ${e.score.toFixed(2)}</span>`;
+    b.onclick=()=>{ select(k); }; box.appendChild(b); } }
+function select(k){ selected=k; const hk= k==='m1'?'temp': (k==='ecgL'?'ecgR':k); if([...heatSel.options].some(o=>o.value===hk)) heatSel.value=hk; colorShirt(); refresh(); }
+function detail(){ const k=selected, e=evalModule(k), p=effective(k), pt=posText(p), g=gearFor(k), d=document.getElementById('detail');
+  let h=`<h3>${NAMES[k]}</h3><div class="bar"><i style="width:${Math.round(e.score*100)}%;background:${pillCol(e.score)}"></i></div>
+  <dl class="kv"><dt>Region</dt><dd>${e.region}</dd><dt>Position</dt><dd>${pt.a}</dd><dt></dt><dd>${pt.b}</dd><dt>Size</dt><dd>${DIMS[k][0]} × ${DIMS[k][1]} × ${DIMS[k][2]} mm</dd>`;
+  if(p.kind==='torso' && k!=='hub' && k!=='hr'){ const L=traceLen(p,state.place.hub,laneFor(k,state.place.hub)); const lim= k.startsWith('ecg')?RULES.rules.ecg_max_trace_mm:RULES.rules.i2c_max_trace_mm; h+=`<dt>Trace to hub</dt><dd class="${L>lim?'b':'ok'}">≈ ${Math.round(L)} mm (limit ${lim})</dd>`; }
+  const ct=contactFor(k); if(ct&&CONTACT_NEEDED[k==='m1'?'m1':k]){ const bad= k==='imu'? ct.gap>3 : (ct.gap>2||ct.lift>.3); h+=`<dt>Skin contact</dt><dd class="${bad?'w':'ok'}">gap ${ct.gap.toFixed(1)} mm (peak ${ct.peak.toFixed(1)}) · lifted ${Math.round(ct.lift*100)}% of time</dd>`; }
+  h+='</dl>';
+  if(e.parts){ for(const q of e.parts){ h+=`<p class="why"><b>${RULES.sensors[q.k].name}: ${label(q.score)} (${q.score.toFixed(2)}).</b> ${q.why}</p><p class="cite">${q.cite}</p>`; } }
+  else { h+=`<p class="why"><b>${label(e.score)} (${e.score.toFixed(2)}).</b> ${e.why}</p><p class="cite">${e.cite}</p>`; }
+  if(g.length) h+=`<ul class="warn">${g.map(z=>`<li class="w">Under ${z.name}: ${z.effect}.</li>`).join('')}</ul>`;
+  d.innerHTML=h; }
+function checks(){ const out=[]; const R=state.place.ecgR, L=state.place.ecgL;
+  if(R.kind==='torso'&&R.s<0) out.push(['b','Right ECG electrode is on the subject\'s left side; the lead will be reversed.']);
+  if(L.kind==='torso'&&L.s>0) out.push(['b','Left ECG electrode is on the subject\'s right side.']);
+  const sep=Math.abs(R.s-L.s); const sepS=Math.min(sep,arc((R.z+L.z)/2).C-sep); if(sepS<RULES.rules.ecg_min_separation_mm) out.push(['w',`ECG electrodes only ${Math.round(sepS)} mm apart (aim ≥ ${RULES.rules.ecg_min_separation_mm}).`]);
+  const ks= state.bundle? ['m1','hub','ecgR','ecgL','hr'] : ['temp','imu','sweat','hub','ecgR','ecgL','hr'];
+  for(const k of ks){ const e=evalModule(k); if(e.score<0.45) out.push(['b',`${NAMES[k]}: weak or no evidence at this site (${e.score.toFixed(2)}).`]);
+    const g=gearFor(k); const thick=DIMS[k][2]>7; for(const z of g){ if(z.id.startsWith('straps')||z.id==='hip_belt') out.push(['w',`${NAMES[k]} sits under the ${z.name}.`]); else if(thick) out.push(['w',`${NAMES[k]} (${DIMS[k][2]} mm thick) sits under the ${z.name}.`]); } }
+  // overlaps
+  const tor=ks.filter(k=>effective(k).kind==='torso'); for(let i=0;i<tor.length;i++)for(let j=i+1;j<tor.length;j++){ const a=effective(tor[i]),b=effective(tor[j]); if(tor[i].startsWith('ecg')!==tor[j].startsWith('ecg'))continue;
+    const dx=Math.abs(a.s-b.s), dz=Math.abs(a.z-b.z); if(dx<(DIMS[tor[i]][0]+DIMS[tor[j]][0])/2 && dz<(DIMS[tor[i]][1]+DIMS[tor[j]][1])/2) out.push(['b',`${NAMES[tor[i]]} overlaps ${NAMES[tor[j]]}.`]); }
+  const fitName={compression:'compression',regular:'regular',loose:'loose'}[SIM.fit];
+  for(const k of ks){ const ct=contactFor(k), need=CONTACT_NEEDED[k]; if(!ct||!need)continue;
+    if(need==='coupling'){ if(ct.gap>3) out.push(['w',`${NAMES[k]}: ${ct.gap.toFixed(1)} mm off the skin in a ${fitName} fit, so it is loosely coupled and will record fabric sway as well as trunk motion (team assessment).`]); }
+    else if(ct.gap>2||ct.lift>.3) out.push(['w',`${NAMES[k]}: ${ct.gap.toFixed(1)} mm mean skin gap, lifted ${Math.round(ct.lift*100)}% of the time in a ${fitName} fit; expect motion artefact (Pedrini Schuch et al., 2026).`]); }
+  if(!state.bundle) out.push(['w','Split sensors need their own docks and traces: more snaps, more wash-exposed contacts.']);
+  if(!out.length) out.push(['ok','No conflicts found for this configuration.']);
+  document.getElementById('checks').innerHTML=out.map(([c,t])=>`<li class="${c}">${t}</li>`).join(''); }
+
+// ---------- 2D flats (SVG) ----------
+const SV=document.getElementById('flats'), SC=0.62;
+function flatOutline(front){ const hw=z=>arc(z).C/4; const d=SL.droop, dir=[Math.cos(d),-Math.sin(d)]; const A=[hw(530),530], Sh=[218,652];
+  const cA=[A[0]+dir[0]*120,A[1]+dir[1]*120], cS=[Sh[0]+dir[0]*205,Sh[1]+dir[1]*205]; const nc=front?615:690;
+  const right=[[hw(0),0],[hw(120),120],[hw(260),260],[hw(400),400],A,cA,cS,Sh,[82,700]]; for(let i=1;i<=11;i++){ const t=i/11; right.push([82*Math.cos(t*Math.PI/2),700-(700-nc)*Math.sin(t*Math.PI/2)]); }
+  const left=right.slice(0,-1).reverse().map(p=>[-p[0],p[1]]); return right.concat(left); }
+function flatXY(p){ const w=where(p.s,p.z); if(w.back) return {front:false,x:p.s,y:p.z}; return {front:true,x:-Math.sign(p.s)*w.dcf,y:p.z}; }
+function svgEl(tag,attrs,txt){ const e=document.createElementNS('http://www.w3.org/2000/svg',tag); for(const [k,v] of Object.entries(attrs))e.setAttribute(k,v); if(txt!=null)e.textContent=txt; SV.appendChild(e); return e; }
+function drawFlats(){ SV.innerHTML=''; const css=getComputedStyle(document.documentElement); const ink=css.getPropertyValue('--ink').trim(), mut=css.getPropertyValue('--muted').trim(), ln=css.getPropertyValue('--line').trim(), acc=css.getPropertyValue('--trace').trim(), sel=css.getPropertyValue('--sel').trim();
+  svgEl('defs',{}).innerHTML=`<marker id="ar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="${sel}"/></marker>`;
+  const views=[{front:true,ox:250,title:'FRONT (outside view)'},{front:false,ox:750,title:'BACK (outside view)'}]; const oy=520;
+  const T=(ox,x,y)=>[ox+x*SC, oy-y*SC];
+  for(const v of views){ const pts=flatOutline(v.front).map(p=>T(v.ox,p[0],p[1]).join(',')).join(' ');
+    svgEl('polygon',{points:pts,fill:'none',stroke:ink,'stroke-width':1.2});
+    const [cx0,cy0]=T(v.ox,0,-10),[cx1,cy1]=T(v.ox,0,730); svgEl('line',{x1:cx0,y1:cy0,x2:cx1,y2:cy1,stroke:mut,'stroke-dasharray':'8 3 2 3','stroke-width':.6});
+    svgEl('text',{x:v.ox,y:22,'text-anchor':'middle','font-size':13,'font-weight':600,fill:ink},v.title);
+    svgEl('text',{x:v.ox+4,y:T(0,0,-6)[1]+14,'font-size':10,fill:mut},v.front?'CF':'CB');
+    const [bx,by]=T(v.ox,0,BNP); svgEl('line',{x1:v.ox-180,y1:by,x2:v.ox+180,y2:by,stroke:ln,'stroke-width':.6,'stroke-dasharray':'3 3'});
+    if(!v.front){ svgEl('circle',{cx:bx,cy:by,r:3,fill:acc}); svgEl('text',{x:bx+6,y:by-6,'font-size':10,fill:acc},'BNP'); } }
+  // traces
+  const hub=state.place.hub, hf=flatXY(hub); const wired= state.bundle? ['m1','ecgR','ecgL'] : ['temp','imu','sweat','ecgR','ecgL'];
+  for(const k of wired){ const p=state.place[k]; if(p.kind!=='torso')continue; const path=tracePathSZ(p,hub,laneFor(k,hub)).map(([s,z])=>{ const C=arc(z).C; let ss=((s+C/2)%C+C)%C-C/2; const f=flatXY({s:ss,z}); return [f.front?250:750,f.x,f.y,f.front]; });
+    let seg=[]; const flush=()=>{ if(seg.length>1) svgEl('polyline',{points:seg.map(q=>T(q[0],q[1],q[2]).join(',')).join(' '),fill:'none',stroke:acc,'stroke-width':1}); seg=[]; };
+    for(const q of path){ if(seg.length&&seg[seg.length-1][3]!==q[3])flush(); seg.push(q);} flush(); }
+  // modules
+  const ks= state.bundle? ['m1','hub','ecgR','ecgL'] : ['temp','imu','sweat','hub','ecgR','ecgL'];
+  for(const k of ks){ const p=state.place[k], f=flatXY(p), ox=f.front?250:750, [w,h]=DIMS[k]; const [x,y]=T(ox,f.x-w/2,p.z+h/2);
+    const inside=k.startsWith('ecg'); svgEl('rect',{x,y,width:w*SC,height:h*SC,rx:6*SC,fill:inside?'none':DIMS[k][3],'fill-opacity':inside?0:.85,stroke:k===selected?sel:ink,'stroke-width':k===selected?2:.8,'stroke-dasharray':inside?'4 2':'none'});
+    const [lx,ly]=T(ox,f.x,p.z); svgEl('text',{x:lx,y:ly+3,'text-anchor':'middle','font-size':9,fill:inside?ink:'#fff'},({m1:'M1',temp:'T',imu:'IMU',sweat:'SW',hub:'HUB',ecgR:'ECG-R',ecgL:'ECG-L'})[k]); }
+  // dimensions for selected (torso only)
+  const p=effective(selected); if(p && p.kind==='torso'){ const f=flatXY(p), ox=f.front?250:750, [cx,cy]=T(ox,f.x,p.z), [bx,by]=T(ox,f.x,BNP), [c0x]=T(ox,0,0);
+    const xl=cx+(f.x>=0?1:-1)*((DIMS[selected][0]/2)*SC+16);
+    svgEl('line',{x1:xl,y1:by,x2:xl,y2:cy,stroke:sel,'stroke-width':1,'marker-start':'url(#ar)','marker-end':'url(#ar)'}); svgEl('line',{x1:cx,y1:cy,x2:xl,y2:cy,stroke:sel,'stroke-width':.5});
+    svgEl('text',{x:xl+(f.x>=0?4:-4),y:(by+cy)/2,'font-size':11,fill:sel,'text-anchor':f.x>=0?'start':'end'},`${Math.round(BNP-p.z)}`);
+    const yl=cy+(DIMS[selected][1]/2)*SC+14; svgEl('line',{x1:c0x,y1:yl,x2:cx,y2:yl,stroke:sel,'stroke-width':1,'marker-start':'url(#ar)','marker-end':'url(#ar)'});
+    svgEl('text',{x:(c0x+cx)/2,y:yl-4,'font-size':11,fill:sel,'text-anchor':'middle'},`${Math.round(Math.abs(f.x))}`); }
+  svgEl('text',{x:20,y:548,'font-size':10,fill:mut},'Dims in mm along the garment surface, size M. Vertical: below BNP level. Horizontal: from CB (back) or CF (front). Orange = conductive-thread traces. Dashed = inside face.');
+  // coordinate table
+  const rows= (state.bundle? ['m1','hub','ecgR','ecgL','hr'] : ['temp','imu','sweat','hub','ecgR','ecgL','hr']).map(k=>{ const e=evalModule(k), pt=posText(effective(k)); return `<tr><td>${NAMES[k]}</td><td>${pt.a}</td><td>${pt.b}</td><td>${e.region}</td><td><span class="pill" style="background:${pillCol(e.score)}">${label(e.score)}</span></td></tr>`; });
+  document.getElementById('coords').innerHTML=`<tr><th>Item</th><th>Vertical</th><th>Lateral</th><th>Region</th><th>Evidence</th></tr>`+rows.join(''); }
+
+// ---------- JSON ----------
+function toJSON(){ const P={}; for(const k of KEYS){ const p=state.place[k]; P[k]= p.kind==='sleeve'? {kind:'sleeve',side:p.side>0?'R':'L',t:+p.t.toFixed(3),ang_deg:+(p.ang*180/Math.PI).toFixed(1)} : {kind:'torso',s:+p.s.toFixed(1),z:+p.z.toFixed(1)}; }
+  const S={}; for(const k of ['temp','imu','sweat','hub','ecgR','ecgL','hr']){ const e=scoreAt(k,effective(k)); S[k]={region:e.region,score:e.score,cite:e.cite}; }
+  return JSON.stringify({version:1,size:'M',units:'mm; s = surface distance from centre back (+ = subject right), z = height above hem (BNP = 700)',bundleM1:state.bundle,modules:P,evidence:S},null,1); }
+function fromJSON(txt){ const j=JSON.parse(txt); state.bundle=!!j.bundleM1; for(const k of KEYS){ const p=j.modules[k]; if(!p)continue; state.place[k]= p.kind==='sleeve'? {kind:'sleeve',side:p.side==='R'?1:-1,t:p.t,ang:p.ang_deg*Math.PI/180} : {kind:'torso',s:p.s,z:p.z}; } document.getElementById('bundle').checked=state.bundle; }
+
+// ---------- presets ----------
+function preset(name){ const Cx=arc(385).C, Cf=arc(470).C; const P={
+  m1:{kind:'torso',s:0,z:600}, temp:{kind:'torso',s:0,z:615}, imu:{kind:'torso',s:0,z:560}, sweat:{kind:'torso',s:0,z:560},
+  hub:{kind:'torso',s:0,z:680}, ecgR:{kind:'torso',s:Cx/2-95,z:385}, ecgL:{kind:'torso',s:-(Cx/2-95),z:385}, hr:{kind:'sleeve',side:-1,t:.5,ang:0} };
+  let bundle=true;
+  if(name==='lim'){ bundle=false; P.imu={kind:'torso',s:-(arc(665).C/4)+10,z:665}; P.temp={kind:'torso',s:0,z:600}; P.sweat={kind:'torso',s:0,z:545}; }
+  if(name==='chest'){ bundle=false; P.imu={kind:'torso',s:Cf/2-1,z:470}; P.temp={kind:'torso',s:0,z:610}; P.sweat={kind:'torso',s:0,z:550}; }
+  if(name==='lumbar'){ bundle=false; P.imu={kind:'torso',s:0,z:200}; P.temp={kind:'torso',s:0,z:610}; P.sweat={kind:'torso',s:0,z:550}; }
+  state.place=P; state.bundle=bundle; document.getElementById('bundle').checked=bundle; document.querySelectorAll('[data-p]').forEach(b=>b.classList.toggle('on',b.dataset.p===name));
+  selected= name==='revA'?'m1':'imu'; select(selected); }
+
+// ---------- shirt colouring (evidence heatmap + gear stripes on the moving cloth) ----------
+function colorShirt(){ const k=heatSel.value, show=heat.checked; const S=sensorRules(k);
+  for(let v=0;v<CL.nT;v++){ const s=CL.sz[v*2], z=CL.sz[v*2+1], j=v%CNZ; let c=BASE;
+    if(show){ c=ramp(scoreAt(k,{kind:'torso',s,z}).score); }
+    const g=gearAt(s,z); if(g.length){ const stripe=(Math.floor((z+s*0.6)/14)%2===0); if(stripe) c=c.map((x,i)=>Math.round(x*.45+[90,110,140][i]*.55)); }
+    if(j===0||j===CNZ-1) c=RIB;
+    tCol[v*3]=c[0]/255; tCol[v*3+1]=c[1]/255; tCol[v*3+2]=c[2]/255; }
+  tGeo.attributes.color.needsUpdate=true;
+  for(const m of sleeves){ const col=m.geometry.attributes.color; for(let v=0;v<SNA*SNT;v++){ const q=(m.userData.off-CL.nT+v)*3, side=CL.sl[q], t=CL.sl[q+1], ang=CL.sl[q+2];
+      let c=BASE; if(show) c=ramp(scoreAt(k,{kind:'sleeve',side,t,ang}).score); if(v%SNT===SNT-1) c=RIB; col.setXYZ(v,c[0]/255,c[1]/255,c[2]/255); } col.needsUpdate=true; }
+  document.getElementById('legendFor').textContent=S.name; document.getElementById('gearKey').style.display=(gearOn.rucksack||gearOn.vest)?'block':'none'; }
+
+// ---------- interaction ----------
+const ray=new THREE.Raycaster(), mouse=new THREE.Vector2(); let dragging=null, grabPlane=null;
+function setMouse(ev){ const r=renderer.domElement.getBoundingClientRect(); mouse.x=((ev.clientX-r.left)/r.width)*2-1; mouse.y=-((ev.clientY-r.top)/r.height)*2+1; ray.setFromCamera(mouse,camera); }
+function hitToSZ(hit){ const f=hit.face, A=_v(f.a), B=_v(f.b), Cc=_v(f.c), bc=new THREE.Vector3(); THREE.Triangle.getBarycoord(hit.point,A,B,Cc,bc);
+  const za=CL.sz[f.a*2+1], zb=CL.sz[f.b*2+1], zc=CL.sz[f.c*2+1], z=za*bc.x+zb*bc.y+zc*bc.z; const Cz=arc(z).C; const sa=CL.sz[f.a*2]; const un=(s)=>{ let d=s-sa; if(d>Cz/2)d-=Cz; if(d<-Cz/2)d+=Cz; return sa+d; };
+  let s=sa*bc.x+un(CL.sz[f.b*2])*bc.y+un(CL.sz[f.c*2])*bc.z; if(s>Cz/2)s-=Cz; if(s<-Cz/2)s+=Cz; return {s,z}; }
+function hitToSleeve(hit,m){ const f=hit.face, o=m.userData.off-CL.nT, bc=new THREE.Vector3(); const off=m.userData.off;
+  THREE.Triangle.getBarycoord(hit.point,_v(off+f.a),_v(off+f.b),_v(off+f.c),bc); const g=(v,k)=>CL.sl[(o+v)*3+k];
+  const t=g(f.a,1)*bc.x+g(f.b,1)*bc.y+g(f.c,1)*bc.z; const a0=g(f.a,2); const un=(x)=>{ let d=x-a0; d=Math.atan2(Math.sin(d),Math.cos(d)); return a0+d; };
+  const ang=a0*bc.x+un(g(f.b,2))*bc.y+un(g(f.c,2))*bc.z; return {side:m.userData.side,t:Math.max(.12,Math.min(.88,t)),ang}; }
+renderer.domElement.addEventListener('pointerdown',ev=>{ setMouse(ev);
+  if(SIM.mouse==='fabric'){ const hits=ray.intersectObjects([torso,...sleeves],false); const h=hits[0]; if(!h)return;
+    const off= h.object===torso? 0 : h.object.userData.off; const cand=[h.face.a,h.face.b,h.face.c].map(v=>v+off); let best=cand[0],bd=1e9; for(const p of cand){ const d=_v(p).distanceToSquared(h.point); if(d<bd){bd=d;best=p;} }
+    CL.grab=best; CL.grabT=[h.point.x,h.point.y,h.point.z]; grabPlane=new THREE.Plane().setFromNormalAndCoplanarPoint(camera.getWorldDirection(new THREE.Vector3()).negate(),h.point);
+    controls.enabled=false; renderer.domElement.setPointerCapture(ev.pointerId); return; }
+  const vis=Object.values(meshes).filter(m=>m.visible); const hit=ray.intersectObjects(vis,false)[0];
+  if(hit){ dragging=hit.object.userData.key; controls.enabled=false; renderer.domElement.setPointerCapture(ev.pointerId); select(dragging); } });
+renderer.domElement.addEventListener('pointermove',ev=>{ setMouse(ev);
+  if(CL.grab>=0&&grabPlane){ const p=new THREE.Vector3(); if(ray.ray.intersectPlane(grabPlane,p)) CL.grabT=[p.x,p.y,p.z]; return; }
+  if(!dragging)return; const k=dragging;
+  if(k==='hr'){ const hit=ray.intersectObjects(sleeves,false)[0]; if(!hit)return; const q=hitToSleeve(hit,hit.object); state.place.hr={kind:'sleeve',...q}; }
+  else { const hit=ray.intersectObject(torso,false)[0]; if(!hit)return; const q=hitToSZ(hit); q.z=Math.max(20,Math.min(690,q.z)); state.place[k]={kind:'torso',s:q.s,z:q.z};
+    if(state.mirror&&(k==='ecgR'||k==='ecgL')){ const o=k==='ecgR'?'ecgL':'ecgR'; state.place[o]={kind:'torso',s:-q.s,z:q.z}; } }
+  placementChanged(true); });
+const endDrag=()=>{ if(CL.grab>=0){ CL.grab=-1; grabPlane=null; controls.enabled=true; } if(dragging){ dragging=null; controls.enabled=true; placementChanged(false); } };
+renderer.domElement.addEventListener('pointerup',endDrag); renderer.domElement.addEventListener('pointercancel',endDrag);
+document.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>preset(b.dataset.p));
+document.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>setView(b.dataset.v));
+heat.onchange=colorShirt; heatSel.onchange=colorShirt;
+document.getElementById('gearRuck').onchange=e=>{gearOn.rucksack=e.target.checked; colorShirt(); refreshPanels();};
+document.getElementById('gearVest').onchange=e=>{gearOn.vest=e.target.checked; colorShirt(); refreshPanels();};
+document.getElementById('bundle').onchange=e=>{ state.bundle=e.target.checked; if(state.bundle){ selected='m1'; } else { const m=state.place.m1; state.place.temp={kind:'torso',s:m.s,z:m.z+15}; state.place.imu={kind:'torso',s:m.s-22,z:m.z-40}; state.place.sweat={kind:'torso',s:m.s+22,z:m.z-40}; selected='temp'; } select(selected); };
+document.getElementById('mirror').onchange=e=>{ state.mirror=e.target.checked; };
+// physics controls
+document.getElementById('physOn').onchange=e=>{ SIM.on=e.target.checked; };
+document.getElementById('fit').onchange=e=>{ SIM.fit=e.target.value; resetCloth(); };
+document.getElementById('motion').onchange=e=>{ SIM.motion=e.target.value; };
+document.getElementById('wind').onchange=e=>{ SIM.wind=e.target.checked; };
+document.getElementById('dummy').onchange=e=>{ bodyGroup.visible=e.target.checked; armMeshes.forEach(m=>m.visible=e.target.checked); };
+document.getElementById('resetCloth').onclick=()=>resetCloth();
+document.querySelectorAll('[data-mouse]').forEach(b=>b.onclick=()=>{ SIM.mouse=b.dataset.mouse; document.querySelectorAll('[data-mouse]').forEach(x=>x.classList.toggle('on',x===b)); document.getElementById('mouseHint').textContent= SIM.mouse==='fabric'? 'Drag the shirt to pull the fabric; it springs back when released.' : 'Drag a sensor to move it; drag empty space to rotate.'; });
+function resetCloth(){ CL=makeCloth(SIM.fit); for(const k in contact) delete contact[k]; colorShirt(); updateMasses(); }
+document.getElementById('copy').onclick=async()=>{ const t=document.getElementById('json'); try{ await navigator.clipboard.writeText(t.value); msg('Copied.'); }catch(_){ t.select(); msg('Text selected; press Ctrl+C.'); } };
+document.getElementById('apply').onclick=()=>{ try{ fromJSON(document.getElementById('json').value); selected=state.bundle?'m1':'temp'; select(selected); msg('Applied.'); }catch(err){ msg('That is not valid placement JSON: '+err.message); } };
+function msg(t){ document.getElementById('msg').textContent=t; }
+function setView(v){ const r=2100, P={back:[0,520,-r],front:[0,520,r],left:[-r,520,0],right:[r,520,0]}[v]; camera.position.set(...P); controls.target.set(0,430,0); controls.update(); }
+function refreshPanels(){ listMods(); detail(); checks(); }
+function placementChanged(fast){ updateMasses(); buildTraces(); refreshPanels(); if(!fast){ drawFlats(); document.getElementById('json').value=toJSON(); } else { drawFlats(); } }
+function refresh(){ placementChanged(false); }
+function resize(){ const c=renderer.domElement, w=c.clientWidth||stage.clientWidth, h=c.clientHeight||stage.clientHeight; renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); }
+addEventListener('resize',resize);
+document.getElementById('refs').innerHTML=REFS.map(r=>`<li>${r}</li>`).join('');
+resize(); setView('back'); preset('revA'); colorShirt();
+let frame=0;
+// settle the cloth before the first frame so the page opens in a rested state
+for(let i=0;i<90;i++){ SIM.t+=1/60; SIM.pose=stepCloth(CL,SIM.t,1/60,'still',false); }
+(function loop(){ requestAnimationFrame(loop);
+  if(SIM.on){ SIM.t+=1/60; SIM.pose=stepCloth(CL,SIM.t,1/60,SIM.motion,SIM.wind); }
+  syncBody(SIM.pose); syncMeshes(); for(const k of KEYS) placeMesh(k); syncTraces();
+  const m=meshes[selected]; if(m&&m.visible){ selRing.visible=true; selRing.position.copy(m.position); selRing.quaternion.copy(m.quaternion); const s=Math.max(DIMS[selected][0],DIMS[selected][1])*0.62; selRing.scale.set(s,s,1); selRing.translateZ(DIMS[selected][2]+1.5);} else selRing.visible=false;
+  measureContact(); if(++frame%15===0){ detail(); checks(); }
+  controls.update(); renderer.render(scene,camera); })();
+
+</script>
+</body></html>
